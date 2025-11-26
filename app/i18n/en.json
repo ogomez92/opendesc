@@ -1,0 +1,323 @@
+{
+  "app": {
+    "title": "OpenDesc",
+    "loading": "Loading..."
+  },
+  "nav": {
+    "settings": "Settings",
+    "readConvert": "Read & Convert",
+    "convertSubtitles": "Convert Subtitles",
+    "subtitleCreation": "Create Subtitles",
+    "align": "Align Audio"
+  },
+  "footer": {
+    "ffmpegInstalled": "FFmpeg is installed",
+    "ffmpegMissing": "FFmpeg is not installed",
+    "installInstructions": "Click here to install FFmpeg",
+    "command": "Run:",
+    "linux": "Use your package manager to install ffmpeg"
+  },
+  "convertSubtitles": {
+    "title": "Convert Subtitles (SRT)",
+    "dragDrop": "Drag & drop an SRT file here, or click to select",
+    "selectFile": "Select SRT File",
+    "processing": "Processing subtitles...",
+    "generatingAudio": "Generating audio for subtitle {{current}} of {{total}}...",
+    "mixingAudio": "Mixing audio tracks...",
+    "adjustingSpeed": "Adjusting speed to fit subtitle {{current}}/{{total}}...",
+    "success": "Subtitles converted successfully!",
+    "openFile": "Open SRT File",
+    "noFile": "No file selected",
+    "fileName": "File: {{name}}",
+    "addOriginal": "Add original audio for ducking",
+    "clearOriginal": "Remove original",
+    "originalAudio": "Original: {{name}}",
+    "originalSelected": "Original audio selected"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "model": "Model",
+    "addService": "Add Service",
+    "noServices": "No services configured. Add a service to get started.",
+    "serviceType": "Service Type",
+    "serviceName": "Service Name",
+    "apiKey": "API Key",
+    "region": "Region",
+    "voice": "Voice",
+    "selectVoice": "Select a voice",
+    "refreshVoices": "Refresh Voice List",
+    "testText": "Test Text",
+    "testTextPlaceholder": "Enter text to test...",
+    "test": "Test",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "setDefault": "Set {{name}} as Default",
+    "default": "Default",
+    "confirmDelete": "Are you sure you want to delete this service?",
+    "serviceTypes": {
+      "webspeech": "Installed Voices",
+      "azure": "Azure Speech",
+      "elevenlabs": "ElevenLabs",
+      "google": "Google Cloud TTS",
+      "gemini": "Google Gemini"
+    },
+    "azureRegions": {
+      "eastus": "East US",
+      "eastus2": "East US 2",
+      "westus": "West US",
+      "westus2": "West US 2",
+      "westus3": "West US 3",
+      "centralus": "Central US",
+      "northcentralus": "North Central US",
+      "southcentralus": "South Central US",
+      "westcentralus": "West Central US",
+      "canadacentral": "Canada Central",
+      "brazilsouth": "Brazil South",
+      "northeurope": "North Europe",
+      "westeurope": "West Europe",
+      "uksouth": "UK South",
+      "ukwest": "UK West",
+      "francecentral": "France Central",
+      "germanywestcentral": "Germany West Central",
+      "norwayeast": "Norway East",
+      "swedencentral": "Sweden Central",
+      "switzerlandnorth": "Switzerland North",
+      "switzerlandwest": "Switzerland West",
+      "eastasia": "East Asia",
+      "southeastasia": "Southeast Asia",
+      "japaneast": "Japan East",
+      "japanwest": "Japan West",
+      "koreacentral": "Korea Central",
+      "koreasouth": "Korea South",
+      "australiaeast": "Australia East",
+      "australiasoutheast": "Australia Southeast",
+      "centralindia": "Central India",
+      "southindia": "South India",
+      "westindia": "West India",
+      "uaenorth": "UAE North",
+      "southafricanorth": "South Africa North"
+    },
+    "table": {
+      "name": "Name",
+      "type": "Type",
+      "voice": "Voice",
+      "apiKey": "API Key",
+      "actions": "Actions"
+    },
+    "errors": {
+      "loadVoices": "Failed to load voices",
+      "testFailed": "Test failed",
+      "saveFailed": "Failed to save service"
+    },
+    "success": {
+      "saved": "Service saved successfully",
+      "deleted": "Service deleted"
+    },
+    "subtitleDefaults": {
+      "title": "Subtitle defaults",
+      "legend": "Subtitling settings",
+      "transcriptionPrompt": "Transcription prompt",
+      "promptPlaceholder": "e.g., Transcribe this audio. Optionally specify the output language.",
+      "transcriptionHint": "Use this prompt to transcribe and/or translate. Include the desired output language or formatting instructions.",
+      "useCache": "Use cache for subtitle conversion",
+      "useCacheHint": "Reuse previously generated clips to speed up repeated runs. Turn off to regenerate every line.",
+      "normalizeTranscription": "Normalize audio before transcription (recommended)",
+      "normalizeTranscriptionHint": "Re-encode to a stable bitrate/sample rate before sending to Gemini. Turn off to send the original file instead.",
+      "save": "Save subtitle defaults",
+      "saved": "Subtitle defaults saved"
+    },
+    "speedFactor": "Speech speed",
+    "speedValue": "Current: {{value}}x"
+  },
+  "subtitleCreation": {
+    "title": "Subtitle Creation",
+    "media": {
+      "title": "Media",
+      "select": "Open audio or video",
+      "openSrt": "Open SRT",
+      "saveSrt": "Save SRT",
+      "loaded": "Loaded: {{name}}",
+      "convertTitle": "Convert video to audio",
+      "convertBody": "The selected video will be converted to audio with FFmpeg. Continue?",
+      "cancel": "Cancel",
+      "convert": "Convert video"
+    },
+    "controls": {
+      "title": "Playback & Navigation",
+      "play": "Play",
+      "pause": "Pause",
+      "currentTime": "Current: {{time}} / {{duration}}",
+      "seekStep": "{{step}}",
+      "navigationToolbar": "Navigation toolbar",
+      "actionToolbar": "Actions toolbar",
+      "seekLabel": "{{direction}} {{amount}}",
+      "back": "Back",
+      "forward": "Forward",
+      "seconds": "seconds",
+      "minutes": "minutes"
+    },
+    "status": {
+      "start": "Start",
+      "end": "End",
+      "notSet": "Not set"
+    },
+    "table": {
+      "title": "Subtitles",
+      "empty": "No subtitles yet",
+      "start": "Start",
+      "end": "End",
+      "text": "Text",
+      "edit": "Edit subtitle {{id}} text",
+      "actions": "Actions",
+      "jumpHere": "Jump here"
+    },
+    "actions": {
+      "jump": "Jump to time",
+      "markStart": "Mark start",
+      "markEnd": "Mark end",
+      "playSegment": "Play segment",
+      "insert": "Insert subtitle",
+      "generate": "Generate clip",
+      "generating": "Generating clip...",
+      "transcribe": "Transcribe",
+      "transcribing": "Transcribing...",
+      "saveSubtitle": "Save subtitle"
+    },
+    "prompts": {
+      "transcribe": "Transcribe this audio.",
+      "jumpFormat": "Use HH:MM:SS (defaults to 00 when omitted)"
+    },
+    "live": {
+      "position": "Position {{time}}",
+      "seekStep": "{{value}}",
+      "startMarked": "Start marked at {{time}}",
+      "endMarked": "End marked at {{time}}",
+      "subtitleInserted": "Subtitle inserted at {{time}}",
+      "transcribing": "Transcribing...",
+      "translating": "Translating...",
+      "converted": "Video converted to audio"
+    },
+    "messages": {
+      "srtLoaded": "Subtitles loaded",
+      "srtSaved": "Subtitles saved to {{path}}",
+      "transcriptionReady": "Transcription ready to edit",
+      "preparingAudio": "Preparing audio for playback...",
+      "audioReady": "Audio ready for playback",
+      "clipReady": "Clip ready",
+      "clipFromCache": "Playing cached clip"
+    },
+    "errors": {
+      "noAudio": "Load an audio or video file first.",
+      "noGemini": "Add a Gemini API key in Settings to transcribe.",
+      "noDefaultService": "Set a default voice in Settings to generate clips.",
+      "noActiveSubtitle": "Select or insert a subtitle before generating.",
+      "emptySubtitle": "The selected subtitle has no text to generate.",
+      "generateFailed": "Clip generation failed.",
+      "cacheUnavailable": "Cache directory is not available.",
+      "transcriptionFailed": "Transcription failed.",
+      "missingMarks": "Mark start and end before inserting a subtitle.",
+      "missingMarksPlaySegment": "Mark start and end before playing a segment.",
+      "missingMarksTranscribe": "Mark start and end before transcribing.",
+      "convertFailed": "Video conversion failed.",
+      "playbackFailed": "Audio could not play.",
+      "noSubtitleAtTime": "Move playback into a subtitle to use this action."
+    },
+    "hotkeys": {
+      "openMedia": "Shortcut: Ctrl+A",
+      "openSrt": "Shortcut: Ctrl+O",
+      "saveSrt": "Shortcut: Ctrl+S",
+      "playPause": "Space: play/pause. Left/Right: seek. Up/Down: change unit of time.",
+      "seekButtons": "Space/Enter to seek",
+      "jump": "J: jump to time",
+      "markStart": "F9 or I: mark start",
+      "markEnd": "F10 or F: mark end",
+      "playSegment": "P: play from start to end",
+      "insert": "F5 or S: insert subtitle",
+      "generate": "G: generate voice clip",
+      "transcribe": "T: transcribe"
+    },
+    "overlap": {
+      "title": "Subtitles overlap detected",
+      "description": "Some subtitles overlap. Adjust start/end times to fix wrapping clips.",
+      "subtitleLabel": "Subtitle {{id}}",
+      "apply": "Save timing fixes"
+    }
+  },
+  "readConvert": {
+    "title": "Read & Convert",
+    "textPlaceholder": "Enter text to read or convert...",
+    "play": "Play with {{service}}",
+    "convert": "Convert to MP3 with {{service}}",
+    "stop": "Stop",
+    "noDefaultService": "No default service configured. Please set a default service in Settings.",
+    "converting": "Converting...",
+    "playing": "Playing...",
+    "errors": {
+      "playFailed": "Failed to play audio",
+      "convertFailed": "Failed to convert audio",
+      "noText": "Please enter some text"
+    },
+    "success": {
+      "converted": "Audio saved successfully"
+    }
+  },
+  "common": {
+    "close": "Close",
+    "error": "Error",
+    "success": "Success"
+  },
+  "align": {
+    "title": "Align Audio & Video",
+    "description": "Run describealign without leaving the app. Select matching video and audio, then align.",
+    "env": {
+      "title": "Environment",
+      "refresh": "Refresh",
+      "ffmpeg": "FFmpeg",
+      "ffmpegOk": "FFmpeg detected. Ready to align.",
+      "ffmpegMissing": "FFmpeg not available. Please install FFmpeg and add it to PATH."
+    },
+    "inputs": {
+      "title": "Inputs"
+    },
+    "selectVideos": "Original audio/video (reference) — pick files or a folder",
+    "selectAudios": "Audio to align (description/dub) — pick files or a folder",
+    "lists": {
+      "videos": "Original audio/video inputs (reference)",
+      "audios": "Audio to align (description/dub)",
+      "empty": "No paths selected yet."
+    },
+    "clear": "Clear",
+    "options": {
+      "title": "Options",
+      "prepend": "Output prefix",
+      "hint": "Audio is aligned by energy envelope cross-correlation and re-encoded to 320 kbps MP3."
+    },
+    "outputPath": "Output file",
+    "chooseOutput": "Save as...",
+    "outputPlaceholder": "If blank, a file will be created in a default folder.",
+    "actions": {
+      "title": "Run"
+    },
+    "run": "Run alignment",
+    "running": "Running alignment...",
+    "logs": "Logs",
+    "logsPlaceholder": "Logs will appear here...",
+    "report": "Alignment report",
+    "reportVideo": "Video",
+    "reportAudio": "Audio",
+    "reportOffset": "Offset (ms)",
+    "reportScore": "Score",
+    "reportOutput": "Output",
+    "saveOutput": "Save output",
+    "errors": {
+      "missingInputs": "Select both video and audio inputs first."
+    },
+    "success": {
+      "completed": "Alignment completed.",
+      "completedPath": "Alignment completed. Output saved to {{path}}."
+    }
+  }
+}

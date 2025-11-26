@@ -1,0 +1,314 @@
+{
+  "app": {
+    "title": "OpenDesc",
+    "loading": "Chargement..."
+  },
+  "nav": {
+    "settings": "Paramètres",
+    "readConvert": "Lire et Convertir",
+    "subtitleCreation": "Création de sous-titres",
+    "align": "Aligner l'audio"
+  },
+  "convertSubtitles": {
+    "title": "Convertir les sous-titres (SRT)",
+    "dragDrop": "Glissez-déposez un fichier SRT ici ou cliquez pour sélectionner",
+    "selectFile": "Sélectionner un fichier SRT",
+    "processing": "Traitement des sous-titres...",
+    "generatingAudio": "Génération de l'audio pour le sous-titre {{current}} sur {{total}}...",
+    "mixingAudio": "Mélange des pistes audio...",
+    "adjustingSpeed": "Ajustement de la vitesse pour le sous-titre {{current}}/{{total}}...",
+    "success": "Sous-titres convertis avec succès !",
+    "openFile": "Ouvrir un fichier SRT",
+    "noFile": "Aucun fichier sélectionné",
+    "fileName": "Fichier : {{name}}",
+    "addOriginal": "Ajouter l'audio original pour le ducking",
+    "clearOriginal": "Retirer l'audio original",
+    "originalAudio": "Original : {{name}}",
+    "originalSelected": "Audio original sélectionné"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "language": "Langue",
+    "model": "Modèle",
+    "addService": "Ajouter un Service",
+    "noServices": "Aucun service configuré. Ajoutez un service pour commencer.",
+    "serviceType": "Type de Service",
+    "serviceName": "Nom du Service",
+    "apiKey": "Clé API",
+    "region": "Région",
+    "voice": "Voix",
+    "selectVoice": "Sélectionner une voix",
+    "refreshVoices": "Actualiser la Liste des Voix",
+    "testText": "Texte de Test",
+    "testTextPlaceholder": "Entrez du texte à tester...",
+    "test": "Tester",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "setDefault": "Définir {{name}} par défaut",
+    "default": "Par défaut",
+    "confirmDelete": "Êtes-vous sûr de vouloir supprimer ce service?",
+    "serviceTypes": {
+      "webspeech": "Voix Installees",
+      "azure": "Azure Speech",
+      "elevenlabs": "ElevenLabs",
+      "google": "Google Cloud TTS"
+    },
+    "azureRegions": {
+      "eastus": "États-Unis Est",
+      "eastus2": "États-Unis Est 2",
+      "westus": "États-Unis Ouest",
+      "westus2": "États-Unis Ouest 2",
+      "westus3": "États-Unis Ouest 3",
+      "centralus": "États-Unis Centre",
+      "northcentralus": "États-Unis Centre-Nord",
+      "southcentralus": "États-Unis Centre-Sud",
+      "westcentralus": "États-Unis Centre-Ouest",
+      "canadacentral": "Canada Centre",
+      "brazilsouth": "Brésil Sud",
+      "northeurope": "Europe Nord",
+      "westeurope": "Europe Ouest",
+      "uksouth": "Royaume-Uni Sud",
+      "ukwest": "Royaume-Uni Ouest",
+      "francecentral": "France Centre",
+      "germanywestcentral": "Allemagne Centre-Ouest",
+      "norwayeast": "Norvège Est",
+      "swedencentral": "Suède Centre",
+      "switzerlandnorth": "Suisse Nord",
+      "switzerlandwest": "Suisse Ouest",
+      "eastasia": "Asie Est",
+      "southeastasia": "Asie Sud-Est",
+      "japaneast": "Japon Est",
+      "japanwest": "Japon Ouest",
+      "koreacentral": "Corée Centre",
+      "koreasouth": "Corée Sud",
+      "australiaeast": "Australie Est",
+      "australiasoutheast": "Australie Sud-Est",
+      "centralindia": "Inde Centre",
+      "southindia": "Inde Sud",
+      "westindia": "Inde Ouest",
+      "uaenorth": "EAU Nord",
+      "southafricanorth": "Afrique du Sud Nord"
+    },
+    "table": {
+      "name": "Nom",
+      "type": "Type",
+      "voice": "Voix",
+      "apiKey": "Clé API",
+      "actions": "Actions"
+    },
+    "errors": {
+      "loadVoices": "Échec du chargement des voix",
+      "testFailed": "Échec du test",
+      "saveFailed": "Échec de l'enregistrement du service"
+    },
+    "success": {
+      "saved": "Service enregistré avec succès",
+      "deleted": "Service supprimé"
+    },
+    "subtitleDefaults": {
+      "title": "Préférences des sous-titres",
+      "legend": "Réglages des sous-titres",
+      "transcriptionPrompt": "Invite de transcription",
+      "promptPlaceholder": "ex. Transcris cet audio. Optionnellement indique la langue de sortie.",
+      "transcriptionHint": "Utilisez ce prompt pour transcrire et/ou traduire. Indiquez la langue de sortie ou des instructions de format.",
+      "useCache": "Utiliser le cache pour la conversion des sous-titres",
+      "useCacheHint": "Réutilise les extraits générés pour accélérer les conversions répétées. Désactivez pour régénérer chaque ligne.",
+      "normalizeTranscription": "Normaliser l'audio avant transcription (recommandé)",
+      "normalizeTranscriptionHint": "Ré-encoder avec un débit/fréquence stables avant d'envoyer à Gemini. Désactivez pour utiliser le fichier original.",
+      "save": "Enregistrer les préférences",
+      "saved": "Préférences enregistrées"
+    },
+    "speedFactor": "Vitesse de parole",
+    "speedValue": "Actuel : {{value}}x"
+  },
+  "readConvert": {
+    "title": "Lire et Convertir",
+    "textPlaceholder": "Entrez du texte à lire ou convertir...",
+    "play": "Lire avec {{service}}",
+    "convert": "Convertir en MP3 avec {{service}}",
+    "stop": "Arrêter",
+    "noDefaultService": "Aucun service par défaut configuré. Veuillez définir un service par défaut dans les Paramètres.",
+    "converting": "Conversion en cours...",
+    "playing": "Lecture en cours...",
+    "errors": {
+      "playFailed": "Échec de la lecture audio",
+      "convertFailed": "Échec de la conversion audio",
+      "noText": "Veuillez entrer du texte"
+    },
+    "success": {
+      "converted": "Audio enregistré avec succès"
+    }
+  },
+  "common": {
+    "close": "Fermer",
+    "error": "Erreur",
+    "success": "Succès"
+  },
+  "subtitleCreation": {
+    "title": "Création de sous-titres",
+    "media": {
+      "title": "Média",
+      "select": "Ouvrir un audio ou une vidéo",
+      "openSrt": "Ouvrir un SRT",
+      "saveSrt": "Enregistrer le SRT",
+      "loaded": "Chargé : {{name}}",
+      "convertTitle": "Convertir la vidéo en audio",
+      "convertBody": "La vidéo sélectionnée sera convertie en audio avec FFmpeg. Continuer ?",
+      "cancel": "Annuler",
+      "convert": "Convertir la vidéo"
+    },
+    "controls": {
+      "title": "Lecture et navigation",
+      "play": "Lecture",
+      "pause": "Pause",
+      "currentTime": "Actuel : {{time}} / {{duration}}",
+      "seekStep": "{{step}}",
+      "navigationToolbar": "Barre de navigation",
+      "actionToolbar": "Barre d'actions",
+      "seekLabel": "{{direction}} {{amount}}",
+      "back": "Recul",
+      "forward": "Avance",
+      "seconds": "secondes",
+      "minutes": "minutes"
+    },
+    "status": {
+      "start": "Début",
+      "end": "Fin",
+      "notSet": "Non défini"
+    },
+    "table": {
+      "title": "Sous-titres",
+      "empty": "Aucun sous-titre pour le moment",
+      "start": "Début",
+      "end": "Fin",
+      "text": "Texte",
+      "edit": "Modifier le sous-titre {{id}}",
+      "actions": "Actions",
+      "jumpHere": "Aller ici"
+    },
+    "actions": {
+      "jump": "Aller à l'heure",
+      "markStart": "Marquer le début",
+      "markEnd": "Marquer la fin",
+      "insert": "Insérer un sous-titre",
+      "transcribe": "Transcrire",
+      "transcribing": "Transcription...",
+      "playSegment": "Lire le segment",
+      "saveSubtitle": "Enregistrer le sous-titre",
+      "generate": "Générer le clip",
+      "generating": "Génération du clip..."
+    },
+    "prompts": {
+      "transcribe": "Transcribe this audio.",
+      "jumpFormat": "Utilisez HH:MM:SS (00 par défaut)"
+    },
+    "live": {
+      "position": "Position {{time}}",
+      "seekStep": "{{value}}",
+      "startMarked": "Début marqué à {{time}}",
+      "endMarked": "Fin marquée à {{time}}",
+      "subtitleInserted": "Sous-titre ajouté à {{time}}",
+      "transcribing": "Transcription...",
+      "translating": "Traduction...",
+      "converted": "Vidéo convertie en audio"
+    },
+    "messages": {
+      "srtLoaded": "Sous-titres chargés",
+      "srtSaved": "Sous-titres enregistrés dans {{path}}",
+      "transcriptionReady": "Transcription prête à être éditée",
+      "preparingAudio": "Préparation de l'audio pour la lecture...",
+      "audioReady": "Audio prêt pour la lecture",
+      "clipReady": "Clip prêt",
+      "clipFromCache": "Lecture du clip en cache"
+    },
+    "errors": {
+      "noAudio": "Chargez d'abord un fichier audio ou vidéo.",
+      "noGemini": "Ajoutez une clé Gemini dans les paramètres pour transcrire.",
+      "transcriptionFailed": "La transcription a échoué.",
+      "missingMarks": "Marquez le début et la fin avant d'insérer un sous-titre.",
+      "missingMarksPlaySegment": "Marquez le début et la fin avant de lire un segment.",
+      "missingMarksTranscribe": "Marquez le début et la fin avant de transcrire.",
+      "convertFailed": "La conversion vidéo a échoué.",
+      "playbackFailed": "Impossible de lire l'audio.",
+      "noDefaultService": "Définissez une voix par défaut dans les paramètres pour générer des clips.",
+      "noActiveSubtitle": "Sélectionnez ou insérez un sous-titre avant de générer.",
+      "emptySubtitle": "Le sous-titre sélectionné n'a pas de texte à générer.",
+      "generateFailed": "Échec de génération du clip.",
+      "cacheUnavailable": "Le dossier de cache n'est pas disponible.",
+      "noSubtitleAtTime": "Placez la lecture sur un sous-titre pour utiliser cette action."
+    },
+    "hotkeys": {
+      "openMedia": "Raccourci : Ctrl+A",
+      "openSrt": "Raccourci : Ctrl+O",
+      "saveSrt": "Raccourci : Ctrl+S",
+      "playPause": "Espace : lecture/pause. Gauche/Droite : avancer/reculer. Haut/Bas : changer l'unité de temps.",
+      "seekButtons": "Espace/Entrée pour chercher",
+      "jump": "J : aller à l'heure",
+      "markStart": "F9 ou I : marquer le début",
+      "markEnd": "F10 ou F : marquer la fin",
+      "insert": "F5 ou S : insérer un sous-titre",
+      "transcribe": "T : transcrire",
+      "playSegment": "P : lecture du début à la fin",
+      "generate": "G : générer le clip vocal"
+    },
+    "overlap": {
+      "title": "Chevauchement de sous-titres détecté",
+      "description": "Certains sous-titres se chevauchent. Ajustez les temps de début/fin.",
+      "subtitleLabel": "Sous-titre {{id}}",
+      "apply": "Enregistrer les corrections"
+    }
+  },
+  "align": {
+    "title": "Aligner l'audio et la vidéo",
+    "description": "Exécute describealign sans quitter l'application. Sélectionnez la vidéo et l'audio correspondants puis alignez.",
+    "env": {
+      "title": "Environnement",
+      "refresh": "Actualiser",
+      "ffmpeg": "FFmpeg",
+      "ffmpegOk": "FFmpeg détecté. Prêt pour l'alignement.",
+      "ffmpegMissing": "FFmpeg est indisponible. Installez-le et ajoutez-le au PATH."
+    },
+    "inputs": {
+      "title": "Entrées"
+    },
+    "selectVideos": "Audio/vidéo original (référence) — fichiers ou dossier",
+    "selectAudios": "Audio à aligner (description/doublage) — fichiers ou dossier",
+    "lists": {
+      "videos": "Entrées audio/vidéo originales (référence)",
+      "audios": "Audios à aligner (description/doublage)",
+      "empty": "Aucun chemin sélectionné pour le moment."
+    },
+    "clear": "Effacer",
+    "options": {
+      "title": "Options",
+      "prepend": "Préfixe de sortie",
+      "hint": "L'audio est aligné par corrélation d'énergie et ré-encodé en MP3 320 kbps."
+    },
+    "outputPath": "Fichier de sortie",
+    "chooseOutput": "Enregistrer sous...",
+    "outputPlaceholder": "Si laissé vide, un fichier sera créé dans un dossier par défaut.",
+    "actions": {
+      "title": "Exécuter"
+    },
+    "run": "Lancer l'alignement",
+    "running": "Alignement en cours...",
+    "logs": "Journaux",
+    "logsPlaceholder": "Les journaux apparaîtront ici...",
+    "report": "Rapport d'alignement",
+    "reportVideo": "Vidéo",
+    "reportAudio": "Audio",
+    "reportOffset": "Décalage (ms)",
+    "reportScore": "Score",
+    "reportOutput": "Sortie",
+    "saveOutput": "Enregistrer la sortie",
+    "errors": {
+      "missingInputs": "Sélectionnez d'abord des entrées vidéo et audio."
+    },
+    "success": {
+      "completed": "Alignement terminé.",
+      "completedPath": "Alignement terminé. Sortie enregistrée dans {{path}}."
+    }
+  }
+}

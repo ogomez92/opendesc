@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(npm run build:electron:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run start:electron:*)",
+      "WebSearch",
+      "WebFetch(domain:elevenlabs.io)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
