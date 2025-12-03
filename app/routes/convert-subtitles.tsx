@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
 import { Alert, AlertDescription } from '~/components/ui/alert';
 import { FileText, Upload, Loader2, Music, Waves, X } from 'lucide-react';
 import { parseSrt, type Subtitle } from '~/lib/srt';
+import { ensureClipFitsSubtitleSlot } from '~/lib/tts';
 
 export default function ConvertSubtitles() {
   const { t } = useTranslation();
@@ -188,40 +189,32 @@ export default function ConvertSubtitles() {
           return { path: result.path, fromCache: false };
         };
 
-        // First try base speed
-        let baseClip = await ensureBaseClip();
-        let finalPath = baseClip.path;
-
-        let durationResult = await window.electronAPI.system.getAudioDuration(finalPath);
-        if (durationResult.error) {
-          delete cache[cacheKey];
-          baseClip = await ensureBaseClip();
-          finalPath = baseClip.path;
-          durationResult = await window.electronAPI.system.getAudioDuration(finalPath);
-        }
-        if (durationResult.duration && durationResult.duration > 0) {
-          const durationMs = durationResult.duration * 1000;
-          const slotMs = Math.max(1, sub.endTime - sub.startTime);
-          const ratio = durationMs / slotMs;
-          if (ratio > 1.02) {
-            const neededSpeed = Math.min(baseSpeed * ratio, 4);
-            if (neededSpeed > baseSpeed + 0.01) {
-              const statusLabel = t('convertSubtitles.adjustingSpeed', { current: i + 1, total: subtitles.length });
-              setProgress({
-                current: i + 1,
-                total: subtitles.length,
-                status: statusLabel,
-              });
-              setLiveMessage(statusLabel);
-              const hash = hashKey(`${cacheKey}|speed|${neededSpeed}`);
-              const targetPath = `${cacheDir}/${hash}.mp3`;
-              const fasterResult = await saveToFile(textForTts, targetPath, { ...defaultService, speedFactor: neededSpeed });
-              if (!fasterResult.error && fasterResult.path) {
-                finalPath = fasterResult.path;
-              }
-            }
-          }
-        }
+        const baseClip = await ensureBaseClip();
+        const finalPath = await ensureClipFitsSubtitleSlot({
+          baseClipPath: baseClip.path,
+          subtitle: sub,
+          baseSpeed,
+          cacheDir,
+          cacheKey,
+          textForTts,
+          hashKey,
+          defaultService,
+          saveToFile,
+          onAdjustingSpeed: () => {
+            const statusLabel = t('convertSubtitles.adjustingSpeed', { current: i + 1, total: subtitles.length });
+            setProgress({
+              current: i + 1,
+              total: subtitles.length,
+              status: statusLabel,
+            });
+            setLiveMessage(statusLabel);
+          },
+          onInvalidDuration: async () => {
+            delete cache[cacheKey];
+            const refreshed = await ensureBaseClip();
+            return refreshed.path;
+          },
+        });
 
         clips.push({ path: finalPath, startTime: sub.startTime });
       }

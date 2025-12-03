@@ -18,6 +18,7 @@ import { Textarea } from '~/components/ui/textarea';
 import { useTTS } from '~/contexts/TTSContext';
 import { languages } from '~/i18n';
 import { Subtitle, formatTimestamp, parseSrt, serializeSrt } from '~/lib/srt';
+import { ensureClipFitsSubtitleSlot } from '~/lib/tts';
 import {
   AlertCircle,
   Bookmark,
@@ -728,38 +729,66 @@ export default function SubtitleCreation() {
     setIsGeneratingClip(true);
     try {
       const { cacheDir, cache } = await getCache();
+      const baseSpeed = defaultService.speedFactor ?? 1;
       const serviceKey = defaultService.id || defaultService.name || 'service';
       const cacheKey = `${serviceKey}|${textForTts}`;
 
-      if (useConvertCache) {
-        const cached = cache[cacheKey];
-        if (cached?.file) {
-          await playGeneratedClip(cached.file);
-          announce(t('subtitleCreation.messages.clipFromCache'));
-          return;
+      const ensureBaseClip = async () => {
+        const cached = useConvertCache ? cache[cacheKey] : null;
+        if (useConvertCache && cached?.file) {
+          return { path: cached.file, fromCache: true };
         }
-      }
 
-      const hash = hashKey(cacheKey);
-      const targetPath = `${cacheDir}/${hash}.mp3`;
-      const result = await saveToFile(textForTts, targetPath, defaultService);
-      if (result.error || !result.path) {
-        const msg = result.error || t('subtitleCreation.errors.generateFailed');
-        throw new Error(msg);
-      }
+        const hash = hashKey(cacheKey);
+        const targetPath = `${cacheDir}/${hash}.mp3`;
+        const result = await saveToFile(textForTts, targetPath, { ...defaultService, speedFactor: baseSpeed });
+        if (result.error || !result.path) {
+          const msg = result.error || t('subtitleCreation.errors.generateFailed');
+          throw new Error(msg);
+        }
 
-      if (useConvertCache) {
-        cache[cacheKey] = {
-          file: result.path,
-          text: textForTts,
-          serviceId: defaultService.id || '',
-          voiceId: defaultService.voiceId,
-        };
-        await persistCache();
-      }
+        if (useConvertCache) {
+          cache[cacheKey] = {
+            file: result.path,
+            text: textForTts,
+            serviceId: defaultService.id || '',
+            voiceId: defaultService.voiceId,
+          };
+          await persistCache();
+        }
 
-      await playGeneratedClip(result.path);
-      announce(t('subtitleCreation.messages.clipReady'));
+        return { path: result.path, fromCache: false };
+      };
+
+      const baseClip = await ensureBaseClip();
+      const finalPath = await ensureClipFitsSubtitleSlot({
+        baseClipPath: baseClip.path,
+        subtitle: targetSubtitle,
+        baseSpeed,
+        cacheDir,
+        cacheKey,
+        textForTts,
+        hashKey,
+        defaultService,
+        saveToFile,
+        onInvalidDuration: async () => {
+          if (useConvertCache) {
+            delete cache[cacheKey];
+          }
+          const refreshed = await ensureBaseClip();
+          if (useConvertCache) {
+            await persistCache();
+          }
+          return refreshed.path;
+        },
+      });
+
+      await playGeneratedClip(finalPath);
+      announce(
+        baseClip.fromCache && finalPath === baseClip.path
+          ? t('subtitleCreation.messages.clipFromCache')
+          : t('subtitleCreation.messages.clipReady')
+      );
     } catch (err) {
       const msg = (err as Error).message || t('subtitleCreation.errors.generateFailed');
       setError(msg);
@@ -771,12 +800,13 @@ export default function SubtitleCreation() {
     announce,
     currentSubtitle,
     defaultService,
-    ensureSubtitleAtCurrentTime,
     getCache,
+    hashKey,
     isGeneratingClip,
     persistCache,
     playGeneratedClip,
     saveToFile,
+    selectSubtitleAtCurrentTime,
     t,
     useConvertCache,
   ]);
