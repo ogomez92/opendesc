@@ -1,5 +1,5 @@
 {
-  "name": "tts",
+  "name": "opendesc",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -8,7 +8,7 @@
     "build": "react-router build",
     "build:electron": "tsc -p electron/tsconfig.json && node -e \"const fs=require('fs');['main','preload'].forEach(f=>{if(fs.existsSync('dist-electron/'+f+'.js')){fs.renameSync('dist-electron/'+f+'.js','dist-electron/'+f+'.cjs')}})\"",
     "start": "npm run build && npm run build:electron && electron .",
-    "package": "npm run build && npm run build:electron && electron-packager . TextToSpeech --platform=win32 --arch=x64 --out=release --overwrite --ignore=node_modules/.bin --prune=true --asar=true",
+    "package": "npm run build && npm run build:electron && electron-packager . OpenDesc --platform=win32 --arch=x64 --out=release --overwrite --ignore=node_modules/.bin --prune=true --asar=true",
     "release": "npm run build && npm run build:electron && electron-builder --publish always"
   },
   "dependencies": {
