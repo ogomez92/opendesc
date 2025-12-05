@@ -19,11 +19,11 @@ jobs:
           - os: windows-latest
             platform: win32
             arch: x64
-            output_dir: TextToSpeech-win32-x64
+            output_dir: opendesc-win32-x64
           - os: ubuntu-latest
             platform: linux
             arch: x64
-            output_dir: TextToSpeech-linux-x64
+            output_dir: opendesc-linux-x64
 
     steps:
       - name: Checkout
@@ -46,7 +46,7 @@ jobs:
 
       - name: Package with electron-packager
         run: |
-          npx electron-packager . TextToSpeech --platform=${{ matrix.platform }} --arch=${{ matrix.arch }} --out=release --overwrite --ignore="node_modules/.bin" --prune=true --asar=true
+          npx electron-packager . opendesc --platform=${{ matrix.platform }} --arch=${{ matrix.arch }} --out=release --overwrite --ignore="node_modules/.bin" --prune=true --asar=true
 
       - name: Zip Release (Windows)
         if: matrix.os == 'windows-latest'
