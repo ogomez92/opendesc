@@ -187,15 +187,17 @@
       "end": "Fin",
       "notSet": "Sin definir"
     },
-    "table": {
+    "list": {
       "title": "Subtítulos",
       "empty": "Aún no hay subtítulos",
-      "start": "Inicio",
-      "end": "Fin",
-      "text": "Texto",
-      "edit": "Editar subtítulo {{id}}",
-      "actions": "Acciones",
-      "jumpHere": "Saltar aquí"
+      "label": "Subtítulo {{id}}: comienza en {{start}}, duración {{duration}}ms — {{text}}",
+      "shortLabel": "{{start}} · {{duration}}ms · {{text}}",
+      "jumpHere": "Saltar aquí",
+      "edit": "Editar",
+      "editSubtitle": "Editar subtítulo",
+      "jumpShortcut": "Pulsa J para saltar",
+      "editShortcut": "Pulsa E para editar",
+      "actions": "Acciones"
     },
     "actions": {
       "jump": "Ir a tiempo",
@@ -266,6 +268,8 @@
       "title": "Subtítulos superpuestos",
       "description": "Algunos subtítulos se superponen. Ajusta inicio/fin para corregirlos.",
       "subtitleLabel": "Subtítulo {{id}}",
+      "startMs": "Inicio (ms)",
+      "endMs": "Fin (ms)",
       "apply": "Guardar tiempos"
     }
   },

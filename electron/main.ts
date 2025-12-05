@@ -8,6 +8,31 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const isDev = process.env.NODE_ENV === 'development';
 
+// Safe logging functions that prevent EPIPE errors
+const safeLog = (...args: any[]) => {
+  try {
+    console.log(...args);
+  } catch (err) {
+    // Silently ignore EPIPE and other pipe errors
+  }
+};
+
+const safeError = (...args: any[]) => {
+  try {
+    console.error(...args);
+  } catch (err) {
+    // Silently ignore EPIPE and other pipe errors
+  }
+};
+
+const safeWarn = (...args: any[]) => {
+  try {
+    console.warn(...args);
+  } catch (err) {
+    // Silently ignore EPIPE and other pipe errors
+  }
+};
+
 let mainWindow: BrowserWindow | null = null;
 let server: http.Server | null = null;
 let serverPort = 0;
@@ -107,7 +132,7 @@ function loadConfig(): TTSConfig {
       };
     }
   } catch (error) {
-    console.error('Error loading config:', error);
+    safeError('Error loading config:', error);
   }
   return { services: [], defaultServiceId: null, subtitleSettings: DEFAULT_SUBTITLE_SETTINGS, language: DEFAULT_LANGUAGE };
 }
@@ -131,7 +156,7 @@ function saveConfig(config: TTSConfig): void {
     };
     fs.writeFileSync(CONFIG_PATH, JSON.stringify(normalized, null, 2));
   } catch (error) {
-    console.error('Error saving config:', error);
+    safeError('Error saving config:', error);
   }
 }
 
@@ -153,7 +178,7 @@ function buildAtempoFilter(speed: number): string {
 }
 
 async function adjustAudioSpeed(inputPath: string, outputPath: string, speed: number): Promise<{ success: boolean; error?: string; path?: string }> {
-  console.log(`[System] Adjusting audio speed: ${speed}x for ${inputPath}`);
+  safeLog(`[System] Adjusting audio speed: ${speed}x for ${inputPath}`);
   if (speed === 1) {
     if (inputPath !== outputPath) {
       try {
@@ -247,7 +272,7 @@ function startServer(): Promise<number> {
       const address = server!.address();
       if (typeof address === 'object' && address) {
         serverPort = address.port;
-        console.log(`Server running at http://127.0.0.1:${serverPort}`);
+        safeLog(`Server running at http://127.0.0.1:${serverPort}`);
         resolve(serverPort);
       } else {
         reject(new Error('Failed to get server port'));
@@ -472,7 +497,7 @@ ipcMain.handle('elevenlabs:getVoices', async (_, apiKey: string) => {
 
 ipcMain.handle('elevenlabs:speak', async (_, text: string, voiceId: string, apiKey: string, modelId?: string, speed?: number) => {
   try {
-    console.log(`[ElevenLabs] Speaking with voice: ${voiceId}, model: ${modelId || 'eleven_multilingual_v2'}`);
+    safeLog(`[ElevenLabs] Speaking with voice: ${voiceId}, model: ${modelId || 'eleven_multilingual_v2'}`);
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
       {
@@ -494,7 +519,7 @@ ipcMain.handle('elevenlabs:speak', async (_, text: string, voiceId: string, apiK
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`[ElevenLabs] API Error (${response.status}):`, errorText);
+      safeError(`[ElevenLabs] API Error (${response.status}):`, errorText);
       let errorMessage = `ElevenLabs API error: ${response.status}`;
       try {
         const errorJson = JSON.parse(errorText);
@@ -522,14 +547,14 @@ ipcMain.handle('elevenlabs:speak', async (_, text: string, voiceId: string, apiK
 
     return { success: true, audioPath: tempPath };
   } catch (error) {
-    console.error('[ElevenLabs] Handler Error:', error);
+    safeError('[ElevenLabs] Handler Error:', error);
     return { error: (error as Error).message };
   }
 });
 
 ipcMain.handle('elevenlabs:saveToFile', async (_, text: string, voiceId: string, apiKey: string, outputPath: string, modelId?: string, speed?: number) => {
   try {
-    console.log(`[ElevenLabs] Saving to file with voice: ${voiceId}, model: ${modelId || 'eleven_multilingual_v2'}`);
+    safeLog(`[ElevenLabs] Saving to file with voice: ${voiceId}, model: ${modelId || 'eleven_multilingual_v2'}`);
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
       {
@@ -551,7 +576,7 @@ ipcMain.handle('elevenlabs:saveToFile', async (_, text: string, voiceId: string,
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`[ElevenLabs] API Error (${response.status}):`, errorText);
+      safeError(`[ElevenLabs] API Error (${response.status}):`, errorText);
       let errorMessage = `ElevenLabs API error: ${response.status}`;
       try {
         const errorJson = JSON.parse(errorText);
@@ -567,7 +592,7 @@ ipcMain.handle('elevenlabs:saveToFile', async (_, text: string, voiceId: string,
     }
 
     const audioBuffer = Buffer.from(await response.arrayBuffer());
-    
+
     if (speed && speed !== 1) {
         const tempPath = path.join(app.getPath('temp'), `elevenlabs-temp-save-${Date.now()}.mp3`);
         fs.writeFileSync(tempPath, audioBuffer);
@@ -734,7 +759,7 @@ ipcMain.handle('gemini:speak', async (_, text: string, voiceId: string, apiKey: 
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`[Gemini] API Error (${response.status}):`, errorText);
+      safeError(`[Gemini] API Error (${response.status}):`, errorText);
       return { error: `Gemini API error: ${response.status} - ${errorText}` };
     }
 
@@ -743,7 +768,7 @@ ipcMain.handle('gemini:speak', async (_, text: string, voiceId: string, apiKey: 
     
     if (!part?.inlineData?.data) {
        // Log full response for debugging if structure is different
-       console.error('[Gemini] Unexpected response structure:', JSON.stringify(data, null, 2));
+       safeError('[Gemini] Unexpected response structure:', JSON.stringify(data, null, 2));
        throw new Error('No audio data received from Gemini.');
     }
 
@@ -760,7 +785,7 @@ ipcMain.handle('gemini:speak', async (_, text: string, voiceId: string, apiKey: 
 
     return { success: true, audioPath: tempPath };
   } catch (error) {
-    console.error('[Gemini] Speak Error:', error);
+    safeError('[Gemini] Speak Error:', error);
     return { error: (error as Error).message };
   }
 });
@@ -819,7 +844,7 @@ ipcMain.handle('gemini:saveToFile', async (_, text: string, voiceId: string, api
 
       const errorText = await response.text();
 
-      console.error(`[Gemini] API Error (${response.status}):`, errorText);
+      safeError(`[Gemini] API Error (${response.status}):`, errorText);
 
       return { error: `Gemini API error: ${response.status} - ${errorText}` };
 
@@ -858,7 +883,7 @@ ipcMain.handle('gemini:saveToFile', async (_, text: string, voiceId: string, api
 
   } catch (error) {
 
-    console.error('[Gemini] SaveToFile Error:', error);
+    safeError('[Gemini] SaveToFile Error:', error);
 
     return { error: (error as Error).message };
 
@@ -978,7 +1003,12 @@ ipcMain.handle(
     }
 
     const result = await model.generateContent({
-      contents: [{ role: 'user', parts }]
+      contents: [{ role: 'user', parts }],
+      generationConfig: {
+        thinkingConfig: {
+          thinkingBudget: 0
+        }
+      } as any
     });
 
     const response = await result.response;
@@ -986,7 +1016,7 @@ ipcMain.handle(
 
     return { text };
   } catch (error) {
-    console.error('[Gemini] Transcribe Error:', error);
+    safeError('[Gemini] Transcribe Error:', error);
     return { error: (error as Error).message };
   } finally {
     // Clean up temporary segment directory if created
@@ -995,7 +1025,7 @@ ipcMain.handle(
       try {
         fs.rmSync(tempDir, { recursive: true, force: true });
       } catch (err) {
-        console.warn('[Gemini] Failed to clean temp segment dir:', err);
+        safeWarn('[Gemini] Failed to clean temp segment dir:', err);
       }
     }
   }
@@ -1485,7 +1515,7 @@ ipcMain.handle('system:removeDir', async (_, dirPath: string) => {
     fs.rmSync(dirPath, { recursive: true, force: true });
     return true;
   } catch (error) {
-    console.error('Error removing directory:', error);
+    safeError('Error removing directory:', error);
     return false;
   }
 });
@@ -1701,7 +1731,7 @@ ipcMain.handle('subtitle:translateWithGemini', async (_, text: string, apiKey: s
     const response = await result.response;
     return { text: response.text() };
   } catch (error) {
-    console.error('[Gemini] Translate Error:', error);
+    safeError('[Gemini] Translate Error:', error);
     return { error: (error as Error).message };
   }
 });

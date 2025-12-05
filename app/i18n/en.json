@@ -164,15 +164,17 @@
       "end": "End",
       "notSet": "Not set"
     },
-    "table": {
+    "list": {
       "title": "Subtitles",
       "empty": "No subtitles yet",
-      "start": "Start",
-      "end": "End",
-      "text": "Text",
-      "edit": "Edit subtitle {{id}} text",
-      "actions": "Actions",
-      "jumpHere": "Jump here"
+      "label": "Subtitle {{id}}: starts at {{start}}, duration {{duration}}ms — {{text}}",
+      "shortLabel": "{{start}} · {{duration}}ms · {{text}}",
+      "jumpHere": "Jump here",
+      "edit": "Edit",
+      "editSubtitle": "Edit subtitle",
+      "jumpShortcut": "Press J to jump",
+      "editShortcut": "Press E to edit",
+      "actions": "Actions"
     },
     "actions": {
       "jump": "Jump to time",
@@ -243,6 +245,8 @@
       "title": "Subtitles overlap detected",
       "description": "Some subtitles overlap. Adjust start/end times to fix wrapping clips.",
       "subtitleLabel": "Subtitle {{id}}",
+      "startMs": "Start (ms)",
+      "endMs": "End (ms)",
       "apply": "Save timing fixes"
     }
   },

@@ -178,15 +178,17 @@
       "end": "Fin",
       "notSet": "Non défini"
     },
-    "table": {
+    "list": {
       "title": "Sous-titres",
       "empty": "Aucun sous-titre pour le moment",
-      "start": "Début",
-      "end": "Fin",
-      "text": "Texte",
-      "edit": "Modifier le sous-titre {{id}}",
-      "actions": "Actions",
-      "jumpHere": "Aller ici"
+      "label": "Sous-titre {{id}}: commence à {{start}}, durée {{duration}}ms — {{text}}",
+      "shortLabel": "{{start}} · {{duration}}ms · {{text}}",
+      "jumpHere": "Aller ici",
+      "edit": "Modifier",
+      "editSubtitle": "Modifier le sous-titre",
+      "jumpShortcut": "Appuyez sur J pour aller",
+      "editShortcut": "Appuyez sur E pour modifier",
+      "actions": "Actions"
     },
     "actions": {
       "jump": "Aller à l'heure",
@@ -257,6 +259,8 @@
       "title": "Chevauchement de sous-titres détecté",
       "description": "Certains sous-titres se chevauchent. Ajustez les temps de début/fin.",
       "subtitleLabel": "Sous-titre {{id}}",
+      "startMs": "Début (ms)",
+      "endMs": "Fin (ms)",
       "apply": "Enregistrer les corrections"
     }
   },

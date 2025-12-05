@@ -6,18 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '~/components/ui/dialog';
 import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '~/components/ui/table';
 import { Textarea } from '~/components/ui/textarea';
+import { Pencil, MapPin } from 'lucide-react';
 import { useTTS } from '~/contexts/TTSContext';
 import { languages } from '~/i18n';
-import { Subtitle, formatTimestamp, parseSrt, serializeSrt } from '~/lib/srt';
+import { type Subtitle, formatTimestamp, parseSrt, serializeSrt } from '~/lib/srt';
 import { ensureClipFitsSubtitleSlot } from '~/lib/tts';
 import {
   AlertCircle,
@@ -103,6 +96,10 @@ export default function SubtitleCreation() {
   const [loadedSrtName, setLoadedSrtName] = useState<string | null>(null);
   const [currentSubtitleId, setCurrentSubtitleId] = useState<number | null>(null);
   const [isGeneratingClip, setIsGeneratingClip] = useState(false);
+  const [editingSubtitleId, setEditingSubtitleId] = useState<number | null>(null);
+  const [focusedButtonIndex, setFocusedButtonIndex] = useState(0);
+  const subtitleListRef = useRef<HTMLUListElement | null>(null);
+  const subtitlePreviewAudioRef = useRef<HTMLAudioElement | null>(null);
   const [overlapDialogOpen, setOverlapDialogOpen] = useState(false);
   const [overlapEdits, setOverlapEdits] = useState<Record<number, { start: string; end: string }>>({});
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -124,6 +121,13 @@ export default function SubtitleCreation() {
       return `file:///${normalizedPath}`;
     }
     return `file://${normalizedPath}`;
+  };
+
+  const formatShortTime = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
   const geminiApiKey = useMemo(
@@ -186,6 +190,15 @@ export default function SubtitleCreation() {
     [currentSubtitleId, subtitles]
   );
 
+  const focusableSubtitleId = useMemo(() => {
+    if (currentSubtitleId !== null) return currentSubtitleId;
+    const playingSub = subtitles.find(
+      (sub) => currentTime >= sub.startTime && currentTime < sub.endTime
+    );
+    if (playingSub) return playingSub.id;
+    return subtitles[0]?.id ?? null;
+  }, [currentSubtitleId, currentTime, subtitles]);
+
   const playGeneratedClip = useCallback(
     async (filePath: string) => {
       try {
@@ -211,6 +224,43 @@ export default function SubtitleCreation() {
     [t]
   );
 
+  const playSubtitlePreview = useCallback(
+    (subtitle: Subtitle) => {
+      if (!audioPath || !audioSrc) return;
+
+      try {
+        const preview = subtitlePreviewAudioRef.current ?? new Audio();
+        if (!subtitlePreviewAudioRef.current) {
+          subtitlePreviewAudioRef.current = preview;
+        }
+
+        preview.pause();
+        preview.src = audioSrc;
+        preview.currentTime = subtitle.startTime / 1000;
+
+        const stopPreview = () => {
+          preview.pause();
+          preview.removeEventListener('timeupdate', checkTime);
+        };
+
+        const checkTime = () => {
+          const elapsed = (preview.currentTime * 1000) - subtitle.startTime;
+          if (elapsed >= 1000) {
+            stopPreview();
+          }
+        };
+
+        preview.addEventListener('timeupdate', checkTime);
+        preview.play().catch(() => {
+          stopPreview();
+        });
+      } catch (err) {
+        // Silently fail preview
+      }
+    },
+    [audioPath, audioSrc]
+  );
+
   const findSubtitleAtPosition = useCallback(
     (positionMs: number) =>
       subtitles.find((sub) => positionMs >= sub.startTime && positionMs < sub.endTime) || null,
@@ -222,6 +272,11 @@ export default function SubtitleCreation() {
     setEndMark(subtitle.endTime);
     startMarkRef.current = subtitle.startTime;
     endMarkRef.current = subtitle.endTime;
+  }, []);
+
+  const announce = useCallback((message: string) => {
+    setLiveMessage(message);
+    setStatusMessage(message);
   }, []);
 
   const selectSubtitleAtCurrentTime = useCallback(
@@ -311,11 +366,6 @@ export default function SubtitleCreation() {
       next.focus();
     }
   };
-
-  const announce = useCallback((message: string) => {
-    setLiveMessage(message);
-    setStatusMessage(message);
-  }, []);
 
   const handleSeek = useCallback(
     (deltaMs: number) => {
@@ -812,11 +862,26 @@ export default function SubtitleCreation() {
   ]);
 
   const handleTextModalSave = () => {
-    addSubtitle(textModalValue);
+    if (editingSubtitleId !== null) {
+      setSubtitles((prev) =>
+        prev.map((sub) =>
+          sub.id === editingSubtitleId ? { ...sub, text: textModalValue } : sub
+        )
+      );
+      announce(t('subtitleCreation.list.editSubtitle'));
+      setEditingSubtitleId(null);
+    } else {
+      addSubtitle(textModalValue);
+    }
     setTextModalOpen(false);
     setTextModalValue('');
     setTimeout(() => {
-      playButtonRef.current?.focus();
+      if (editingSubtitleId !== null) {
+        const listItem = subtitleListRef.current?.querySelector(`[data-subtitle-id="${editingSubtitleId}"]`) as HTMLElement;
+        listItem?.focus();
+      } else {
+        playButtonRef.current?.focus();
+      }
     }, 100);
   };
 
@@ -836,6 +901,85 @@ export default function SubtitleCreation() {
       announce(t('subtitleCreation.live.position', { time: formatTimestamp(subtitle.startTime) }));
     },
     [announce, t]
+  );
+
+  const handleOpenEditDialog = useCallback(
+    (subtitle: Subtitle) => {
+      setEditingSubtitleId(subtitle.id);
+      setTextModalValue(subtitle.text);
+      setTextModalMode('insert');
+      setTextModalOpen(true);
+    },
+    []
+  );
+
+  const handleSubtitleListKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLLIElement>, subtitle: Subtitle, index: number) => {
+      const actionButtons = ['jump', 'edit'] as const;
+      const key = event.key.toLowerCase();
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        const prevIndex = Math.max(0, index - 1);
+        if (prevIndex !== index) {
+          const prevSub = subtitles[prevIndex];
+          setCurrentSubtitleId(prevSub.id);
+          setFocusedButtonIndex(0);
+          playSubtitlePreview(prevSub);
+          const prevItem = subtitleListRef.current?.querySelector(`[data-subtitle-id="${prevSub.id}"]`) as HTMLElement;
+          prevItem?.focus();
+        }
+      } else if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        const nextIndex = Math.min(subtitles.length - 1, index + 1);
+        if (nextIndex !== index) {
+          const nextSub = subtitles[nextIndex];
+          setCurrentSubtitleId(nextSub.id);
+          setFocusedButtonIndex(0);
+          playSubtitlePreview(nextSub);
+          const nextItem = subtitleListRef.current?.querySelector(`[data-subtitle-id="${nextSub.id}"]`) as HTMLElement;
+          nextItem?.focus();
+        }
+      } else if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        setFocusedButtonIndex((prev) => Math.max(0, prev - 1));
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        setFocusedButtonIndex((prev) => Math.min(actionButtons.length - 1, prev + 1));
+      } else if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        if (focusedButtonIndex === 0) {
+          handleJumpToSubtitle(subtitle);
+        } else {
+          handleOpenEditDialog(subtitle);
+        }
+      } else if (key === 'j') {
+        event.preventDefault();
+        handleJumpToSubtitle(subtitle);
+      } else if (key === 'e') {
+        event.preventDefault();
+        handleOpenEditDialog(subtitle);
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        if (subtitles.length > 0) {
+          const firstSub = subtitles[0];
+          setCurrentSubtitleId(firstSub.id);
+          setFocusedButtonIndex(0);
+          const firstItem = subtitleListRef.current?.querySelector(`[data-subtitle-id="${firstSub.id}"]`) as HTMLElement;
+          firstItem?.focus();
+        }
+      } else if (event.key === 'End') {
+        event.preventDefault();
+        if (subtitles.length > 0) {
+          const lastSub = subtitles[subtitles.length - 1];
+          setCurrentSubtitleId(lastSub.id);
+          setFocusedButtonIndex(0);
+          const lastItem = subtitleListRef.current?.querySelector(`[data-subtitle-id="${lastSub.id}"]`) as HTMLElement;
+          lastItem?.focus();
+        }
+      }
+    },
+    [subtitles, focusedButtonIndex, handleJumpToSubtitle, handleOpenEditDialog, playSubtitlePreview]
   );
 
   useEffect(() => {
@@ -1236,60 +1380,144 @@ export default function SubtitleCreation() {
         <CardHeader className="flex items-center gap-2">
           <CardTitle className="flex items-center gap-2">
             <Radio className="h-5 w-5" aria-hidden="true" />
-            {t('subtitleCreation.table.title')}
+            {t('subtitleCreation.list.title')}
           </CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
+        <CardContent>
           {subtitles.length === 0 ? (
             <div className="flex items-center gap-2 text-muted-foreground">
               <AlertCircle className="h-4 w-4" />
-              <p>{t('subtitleCreation.table.empty')}</p>
+              <p>{t('subtitleCreation.list.empty')}</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-              <TableHead className="w-16">#</TableHead>
-              <TableHead className="w-40">{t('subtitleCreation.table.start')}</TableHead>
-              <TableHead className="w-40">{t('subtitleCreation.table.end')}</TableHead>
-              <TableHead>{t('subtitleCreation.table.text')}</TableHead>
-              <TableHead className="w-32">{t('subtitleCreation.table.actions')}</TableHead>
-            </TableRow>
-          </TableHeader>
-            <TableBody>
-              {subtitles.map((sub) => (
-                <TableRow key={sub.id}>
-                  <TableCell className="font-mono">{sub.id}</TableCell>
-                  <TableCell className="font-mono text-sm">{formatTimestamp(sub.startTime)}</TableCell>
-                  <TableCell className="font-mono text-sm">{formatTimestamp(sub.endTime)}</TableCell>
-                  <TableCell>
-                    <Textarea
-                      value={sub.text}
-                      onChange={(e) => {
+            <>
+              <p id="subtitle-list-shortcuts" className="sr-only">
+                {t('subtitleCreation.list.jumpShortcut')}. {t('subtitleCreation.list.editShortcut')}.
+              </p>
+              <ul
+                ref={subtitleListRef}
+                role="listbox"
+                aria-label={t('subtitleCreation.list.title')}
+                aria-describedby="subtitle-list-shortcuts"
+                className="space-y-1"
+              >
+                {subtitles.map((sub, index) => {
+                  const isSelected = currentSubtitleId === sub.id;
+                  const isPlayingThisSubtitle =
+                    currentTime >= sub.startTime && currentTime < sub.endTime;
+                  const duration = sub.endTime - sub.startTime;
+                  const truncatedText =
+                    sub.text.length > 60
+                      ? sub.text.substring(0, 60) + '...'
+                      : sub.text;
+
+                  return (
+                    <li
+                      key={sub.id}
+                      role="option"
+                      aria-selected={isSelected}
+                      aria-label={t('subtitleCreation.list.label', {
+                        id: sub.id,
+                        start: formatShortTime(sub.startTime),
+                        duration: Math.round(duration),
+                        text: sub.text,
+                      })}
+                      aria-describedby="subtitle-list-shortcuts"
+                      data-subtitle-id={sub.id}
+                      tabIndex={sub.id === focusableSubtitleId ? 0 : -1}
+                      onKeyDown={(e) => handleSubtitleListKeyDown(e, sub, index)}
+                      onFocus={() => {
                         setCurrentSubtitleId(sub.id);
-                        setSubtitles((prev) =>
-                          prev.map((item) => (item.id === sub.id ? { ...item, text: e.target.value } : item))
-                        );
+                        setFocusedButtonIndex(0);
+                        playSubtitlePreview(sub);
                       }}
-                      aria-label={t('subtitleCreation.table.edit', { id: sub.id })}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      size="sm"
-                      variant="outline"
                       onClick={() => {
-                        handleJumpToSubtitle(sub);
-                        playButtonRef.current?.focus();
+                        setCurrentSubtitleId(sub.id);
+                        setFocusedButtonIndex(0);
+                        playSubtitlePreview(sub);
                       }}
+                      className={`
+                        group flex items-center gap-3 rounded-lg border p-3 cursor-pointer
+                        transition-colors outline-none
+                        focus:ring-2 focus:ring-ring focus:ring-offset-2
+                        ${isSelected
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                        }
+                        ${isPlayingThisSubtitle ? 'ring-2 ring-green-500/50' : ''}
+                      `}
                     >
-                      {t('subtitleCreation.table.jumpHere')}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="font-mono text-muted-foreground w-8">
+                            #{sub.id}
+                          </span>
+                          <span className="font-mono font-medium">
+                            {formatShortTime(sub.startTime)}
+                          </span>
+                          <span className="text-muted-foreground">·</span>
+                          <span className="text-muted-foreground text-xs">
+                            {Math.round(duration)}ms
+                          </span>
+                        </div>
+                        <p className="mt-1 text-sm truncate" title={sub.text}>
+                          {truncatedText.replace(/\n/g, ' ')}
+                        </p>
+                      </div>
+
+                      <div
+                        className="flex items-center gap-1"
+                        role="group"
+                        aria-label={t('subtitleCreation.list.actions')}
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleJumpToSubtitle(sub);
+                          }}
+                          className={`
+                            p-2 rounded-md transition-colors
+                            ${isSelected && focusedButtonIndex === 0
+                              ? 'bg-primary text-primary-foreground'
+                              : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                            }
+                          `}
+                          aria-label={t('subtitleCreation.list.jumpHere')}
+                          aria-describedby="shortcut-jump"
+                          tabIndex={-1}
+                        >
+                          <MapPin className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEditDialog(sub);
+                          }}
+                          className={`
+                            p-2 rounded-md transition-colors
+                            ${isSelected && focusedButtonIndex === 1
+                              ? 'bg-primary text-primary-foreground'
+                              : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                            }
+                          `}
+                          aria-label={t('subtitleCreation.list.edit')}
+                          aria-describedby="shortcut-edit"
+                          tabIndex={-1}
+                        >
+                          <Pencil className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="sr-only">
+                <span id="shortcut-jump">{t('subtitleCreation.list.jumpShortcut')}</span>
+                <span id="shortcut-edit">{t('subtitleCreation.list.editShortcut')}</span>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -1336,24 +1564,47 @@ export default function SubtitleCreation() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={textModalOpen} onOpenChange={setTextModalOpen}>
+      <Dialog
+        open={textModalOpen}
+        onOpenChange={(open) => {
+          setTextModalOpen(open);
+          if (!open) {
+            setEditingSubtitleId(null);
+            setTimeout(() => playButtonRef.current?.focus(), 0);
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {textModalMode === 'transcribe'
-                ? t('subtitleCreation.actions.transcribe')
-                : t('subtitleCreation.actions.insert')}
+              {editingSubtitleId !== null
+                ? t('subtitleCreation.list.editSubtitle')
+                : textModalMode === 'transcribe'
+                  ? t('subtitleCreation.actions.transcribe')
+                  : t('subtitleCreation.actions.insert')}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <Label htmlFor="subtitleText">{t('subtitleCreation.table.text')}</Label>
+            <Label htmlFor="subtitleText">{t('subtitleCreation.list.title')}</Label>
             <Input
               id="subtitleText"
               value={textModalValue}
               onChange={(e) => setTextModalValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleTextModalSave();
+                }
+              }}
             />
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setTextModalOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setTextModalOpen(false);
+                  setEditingSubtitleId(null);
+                }}
+              >
                 {t('subtitleCreation.media.cancel')}
               </Button>
               <Button onClick={handleTextModalSave}>{t('subtitleCreation.actions.saveSubtitle')}</Button>
@@ -1372,13 +1623,13 @@ export default function SubtitleCreation() {
           </p>
           <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
             {Object.entries(overlapEdits).map(([id, values]) => (
-              <div key={id} className="space-y-2 rounded-md border p-3">
-                <div className="text-sm font-medium">
+              <fieldset key={id} className="space-y-2 rounded-md border p-3">
+                <legend className="text-sm font-medium px-2">
                   {t('subtitleCreation.overlap.subtitleLabel', { id })}
-                </div>
+                </legend>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label htmlFor={`overlap-start-${id}`}>{t('subtitleCreation.status.start')}</Label>
+                    <Label htmlFor={`overlap-start-${id}`}>{t('subtitleCreation.overlap.startMs')}</Label>
                     <Input
                       id={`overlap-start-${id}`}
                       type="number"
@@ -1392,7 +1643,7 @@ export default function SubtitleCreation() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor={`overlap-end-${id}`}>{t('subtitleCreation.status.end')}</Label>
+                    <Label htmlFor={`overlap-end-${id}`}>{t('subtitleCreation.overlap.endMs')}</Label>
                     <Input
                       id={`overlap-end-${id}`}
                       type="number"
@@ -1406,7 +1657,7 @@ export default function SubtitleCreation() {
                     />
                   </div>
                 </div>
-              </div>
+              </fieldset>
             ))}
           </div>
           <div className="flex justify-end gap-2">
@@ -1423,6 +1674,7 @@ export default function SubtitleCreation() {
       </div>
 
       <audio ref={previewAudioRef} className="hidden" />
+      <audio ref={subtitlePreviewAudioRef} className="hidden" />
       <audio ref={audioRef} src={audioSrc} className="hidden" />
     </main>
   );

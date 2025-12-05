@@ -7,7 +7,10 @@
       "Bash(npm run build:*)",
       "Bash(npm run start:electron:*)",
       "WebSearch",
-      "WebFetch(domain:elevenlabs.io)"
+      "WebFetch(domain:elevenlabs.io)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run start)",
+      "WebFetch(domain:ai.google.dev)"
     ],
     "deny": [],
     "ask": []

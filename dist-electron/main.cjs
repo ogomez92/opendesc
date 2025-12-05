@@ -41,6 +41,31 @@ const http = __importStar(require("http"));
 const url = __importStar(require("url"));
 const generative_ai_1 = require("@google/generative-ai");
 const isDev = process.env.NODE_ENV === 'development';
+// Safe logging functions that prevent EPIPE errors
+const safeLog = (...args) => {
+    try {
+        console.log(...args);
+    }
+    catch (err) {
+        // Silently ignore EPIPE and other pipe errors
+    }
+};
+const safeError = (...args) => {
+    try {
+        console.error(...args);
+    }
+    catch (err) {
+        // Silently ignore EPIPE and other pipe errors
+    }
+};
+const safeWarn = (...args) => {
+    try {
+        console.warn(...args);
+    }
+    catch (err) {
+        // Silently ignore EPIPE and other pipe errors
+    }
+};
 let mainWindow = null;
 let server = null;
 let serverPort = 0;
@@ -78,7 +103,7 @@ function loadConfig() {
         }
     }
     catch (error) {
-        console.error('Error loading config:', error);
+        safeError('Error loading config:', error);
     }
     return { services: [], defaultServiceId: null, subtitleSettings: DEFAULT_SUBTITLE_SETTINGS, language: DEFAULT_LANGUAGE };
 }
@@ -101,7 +126,7 @@ function saveConfig(config) {
         fs.writeFileSync(CONFIG_PATH, JSON.stringify(normalized, null, 2));
     }
     catch (error) {
-        console.error('Error saving config:', error);
+        safeError('Error saving config:', error);
     }
 }
 function buildAtempoFilter(speed) {
@@ -121,7 +146,7 @@ function buildAtempoFilter(speed) {
     return filters.join(',');
 }
 async function adjustAudioSpeed(inputPath, outputPath, speed) {
-    console.log(`[System] Adjusting audio speed: ${speed}x for ${inputPath}`);
+    safeLog(`[System] Adjusting audio speed: ${speed}x for ${inputPath}`);
     if (speed === 1) {
         if (inputPath !== outputPath) {
             try {
@@ -208,7 +233,7 @@ function startServer() {
             const address = server.address();
             if (typeof address === 'object' && address) {
                 serverPort = address.port;
-                console.log(`Server running at http://127.0.0.1:${serverPort}`);
+                safeLog(`Server running at http://127.0.0.1:${serverPort}`);
                 resolve(serverPort);
             }
             else {
@@ -408,7 +433,7 @@ electron_1.ipcMain.handle('elevenlabs:getVoices', async (_, apiKey) => {
 });
 electron_1.ipcMain.handle('elevenlabs:speak', async (_, text, voiceId, apiKey, modelId, speed) => {
     try {
-        console.log(`[ElevenLabs] Speaking with voice: ${voiceId}, model: ${modelId || 'eleven_multilingual_v2'}`);
+        safeLog(`[ElevenLabs] Speaking with voice: ${voiceId}, model: ${modelId || 'eleven_multilingual_v2'}`);
         const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
             method: 'POST',
             headers: {
@@ -426,7 +451,7 @@ electron_1.ipcMain.handle('elevenlabs:speak', async (_, text, voiceId, apiKey, m
         });
         if (!response.ok) {
             const errorText = await response.text();
-            console.error(`[ElevenLabs] API Error (${response.status}):`, errorText);
+            safeError(`[ElevenLabs] API Error (${response.status}):`, errorText);
             let errorMessage = `ElevenLabs API error: ${response.status}`;
             try {
                 const errorJson = JSON.parse(errorText);
@@ -454,13 +479,13 @@ electron_1.ipcMain.handle('elevenlabs:speak', async (_, text, voiceId, apiKey, m
         return { success: true, audioPath: tempPath };
     }
     catch (error) {
-        console.error('[ElevenLabs] Handler Error:', error);
+        safeError('[ElevenLabs] Handler Error:', error);
         return { error: error.message };
     }
 });
 electron_1.ipcMain.handle('elevenlabs:saveToFile', async (_, text, voiceId, apiKey, outputPath, modelId, speed) => {
     try {
-        console.log(`[ElevenLabs] Saving to file with voice: ${voiceId}, model: ${modelId || 'eleven_multilingual_v2'}`);
+        safeLog(`[ElevenLabs] Saving to file with voice: ${voiceId}, model: ${modelId || 'eleven_multilingual_v2'}`);
         const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
             method: 'POST',
             headers: {
@@ -478,7 +503,7 @@ electron_1.ipcMain.handle('elevenlabs:saveToFile', async (_, text, voiceId, apiK
         });
         if (!response.ok) {
             const errorText = await response.text();
-            console.error(`[ElevenLabs] API Error (${response.status}):`, errorText);
+            safeError(`[ElevenLabs] API Error (${response.status}):`, errorText);
             let errorMessage = `ElevenLabs API error: ${response.status}`;
             try {
                 const errorJson = JSON.parse(errorText);
@@ -644,14 +669,14 @@ electron_1.ipcMain.handle('gemini:speak', async (_, text, voiceId, apiKey, style
         });
         if (!response.ok) {
             const errorText = await response.text();
-            console.error(`[Gemini] API Error (${response.status}):`, errorText);
+            safeError(`[Gemini] API Error (${response.status}):`, errorText);
             return { error: `Gemini API error: ${response.status} - ${errorText}` };
         }
         const data = await response.json();
         const part = data.candidates?.[0]?.content?.parts?.[0];
         if (!part?.inlineData?.data) {
             // Log full response for debugging if structure is different
-            console.error('[Gemini] Unexpected response structure:', JSON.stringify(data, null, 2));
+            safeError('[Gemini] Unexpected response structure:', JSON.stringify(data, null, 2));
             throw new Error('No audio data received from Gemini.');
         }
         const audioBuffer = Buffer.from(part.inlineData.data, 'base64');
@@ -666,7 +691,7 @@ electron_1.ipcMain.handle('gemini:speak', async (_, text, voiceId, apiKey, style
         return { success: true, audioPath: tempPath };
     }
     catch (error) {
-        console.error('[Gemini] Speak Error:', error);
+        safeError('[Gemini] Speak Error:', error);
         return { error: error.message };
     }
 });
@@ -692,7 +717,7 @@ electron_1.ipcMain.handle('gemini:saveToFile', async (_, text, voiceId, apiKey, 
         });
         if (!response.ok) {
             const errorText = await response.text();
-            console.error(`[Gemini] API Error (${response.status}):`, errorText);
+            safeError(`[Gemini] API Error (${response.status}):`, errorText);
             return { error: `Gemini API error: ${response.status} - ${errorText}` };
         }
         const data = await response.json();
@@ -719,7 +744,7 @@ electron_1.ipcMain.handle('gemini:saveToFile', async (_, text, voiceId, apiKey, 
         }
     }
     catch (error) {
-        console.error('[Gemini] SaveToFile Error:', error);
+        safeError('[Gemini] SaveToFile Error:', error);
         return { error: error.message };
     }
 });
@@ -810,14 +835,19 @@ electron_1.ipcMain.handle('gemini:transcribe', async (_, audioPath, apiKey, prom
             });
         }
         const result = await model.generateContent({
-            contents: [{ role: 'user', parts }]
+            contents: [{ role: 'user', parts }],
+            generationConfig: {
+                thinkingConfig: {
+                    thinkingBudget: 0
+                }
+            }
         });
         const response = await result.response;
         const text = response.text();
         return { text };
     }
     catch (error) {
-        console.error('[Gemini] Transcribe Error:', error);
+        safeError('[Gemini] Transcribe Error:', error);
         return { error: error.message };
     }
     finally {
@@ -828,7 +858,7 @@ electron_1.ipcMain.handle('gemini:transcribe', async (_, audioPath, apiKey, prom
                 fs.rmSync(tempDir, { recursive: true, force: true });
             }
             catch (err) {
-                console.warn('[Gemini] Failed to clean temp segment dir:', err);
+                safeWarn('[Gemini] Failed to clean temp segment dir:', err);
             }
         }
     }
@@ -1280,7 +1310,7 @@ electron_1.ipcMain.handle('system:removeDir', async (_, dirPath) => {
         return true;
     }
     catch (error) {
-        console.error('Error removing directory:', error);
+        safeError('Error removing directory:', error);
         return false;
     }
 });
@@ -1472,7 +1502,7 @@ electron_1.ipcMain.handle('subtitle:translateWithGemini', async (_, text, apiKey
         return { text: response.text() };
     }
     catch (error) {
-        console.error('[Gemini] Translate Error:', error);
+        safeError('[Gemini] Translate Error:', error);
         return { error: error.message };
     }
 });

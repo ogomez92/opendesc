@@ -176,15 +176,17 @@
       "end": "Fine",
       "notSet": "Non impostato"
     },
-    "table": {
+    "list": {
       "title": "Sottotitoli",
       "empty": "Nessun sottotitolo ancora",
-      "start": "Inizio",
-      "end": "Fine",
-      "text": "Testo",
-      "edit": "Modifica sottotitolo {{id}}",
-      "actions": "Azioni",
-      "jumpHere": "Vai qui"
+      "label": "Sottotitolo {{id}}: inizia a {{start}}, durata {{duration}}ms — {{text}}",
+      "shortLabel": "{{start}} · {{duration}}ms · {{text}}",
+      "jumpHere": "Vai qui",
+      "edit": "Modifica",
+      "editSubtitle": "Modifica sottotitolo",
+      "jumpShortcut": "Premi J per andare",
+      "editShortcut": "Premi E per modificare",
+      "actions": "Azioni"
     },
     "actions": {
       "jump": "Vai al tempo",
@@ -255,6 +257,8 @@
       "title": "Sovrapposizione sottotitoli",
       "description": "Alcuni sottotitoli si sovrappongono. Regola inizio/fine per sistemarli.",
       "subtitleLabel": "Sottotitolo {{id}}",
+      "startMs": "Inizio (ms)",
+      "endMs": "Fine (ms)",
       "apply": "Salva correzioni"
     }
   },
