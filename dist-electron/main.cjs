@@ -37,10 +37,23 @@ const electron_1 = require("electron");
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
 const child_process_1 = require("child_process");
-const http = __importStar(require("http"));
-const url = __importStar(require("url"));
 const generative_ai_1 = require("@google/generative-ai");
+const url_1 = require("url");
 const isDev = process.env.NODE_ENV === 'development';
+// Register app:// as a privileged scheme (must be done before app is ready)
+if (!isDev) {
+    electron_1.protocol.registerSchemesAsPrivileged([
+        {
+            scheme: 'app',
+            privileges: {
+                standard: true,
+                secure: true,
+                supportFetchAPI: true,
+                corsEnabled: true,
+            },
+        },
+    ]);
+}
 // Safe logging functions that prevent EPIPE errors
 const safeLog = (...args) => {
     try {
@@ -67,8 +80,6 @@ const safeWarn = (...args) => {
     }
 };
 let mainWindow = null;
-let server = null;
-let serverPort = 0;
 const CONFIG_PATH = path.join(electron_1.app.getPath('userData'), 'tts-config.json');
 const CONVERT_CACHE_DIR = path.join(electron_1.app.getPath('userData'), 'subtitle-convert-cache');
 const DEFAULT_LANGUAGE = 'en';
@@ -192,65 +203,37 @@ async function adjustAudioSpeed(inputPath, outputPath, speed) {
         });
     });
 }
-const MIME_TYPES = {
-    '.html': 'text/html',
-    '.js': 'application/javascript',
-    '.css': 'text/css',
-    '.json': 'application/json',
-    '.png': 'image/png',
-    '.jpg': 'image/jpeg',
-    '.gif': 'image/gif',
-    '.svg': 'image/svg+xml',
-    '.woff': 'font/woff',
-    '.woff2': 'font/woff2',
-    '.ttf': 'font/ttf',
-    '.ico': 'image/x-icon',
-};
-function startServer() {
-    return new Promise((resolve, reject) => {
-        const clientPath = path.join(__dirname, '../build/client');
-        server = http.createServer((req, res) => {
-            let pathname = url.parse(req.url || '/').pathname || '/';
-            // Handle SPA routing - serve index.html for all routes
-            let filePath = path.join(clientPath, pathname);
-            // If path doesn't exist or is a directory, serve index.html
-            if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-                filePath = path.join(clientPath, 'index.html');
-            }
-            const ext = path.extname(filePath).toLowerCase();
-            const mimeType = MIME_TYPES[ext] || 'application/octet-stream';
-            try {
-                const content = fs.readFileSync(filePath);
-                res.writeHead(200, { 'Content-Type': mimeType });
-                res.end(content);
-            }
-            catch (err) {
-                res.writeHead(404);
-                res.end('Not found');
-            }
-        });
-        server.listen(0, '127.0.0.1', () => {
-            const address = server.address();
-            if (typeof address === 'object' && address) {
-                serverPort = address.port;
-                safeLog(`Server running at http://127.0.0.1:${serverPort}`);
-                resolve(serverPort);
-            }
-            else {
-                reject(new Error('Failed to get server port'));
-            }
-        });
-        server.on('error', reject);
+// Register custom app:// protocol for serving static files (much faster than HTTP server)
+function registerAppProtocol() {
+    const clientPath = path.join(__dirname, '../build/client');
+    electron_1.protocol.handle('app', (request) => {
+        // Parse the URL - format is app://host/path
+        const url = new URL(request.url);
+        let pathname = decodeURIComponent(url.pathname);
+        // Remove leading slash for path.join
+        if (pathname.startsWith('/')) {
+            pathname = pathname.slice(1);
+        }
+        let filePath = path.join(clientPath, pathname || 'index.html');
+        // Handle SPA routing - serve index.html for routes that don't exist as files
+        if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+            filePath = path.join(clientPath, 'index.html');
+        }
+        return electron_1.net.fetch((0, url_1.pathToFileURL)(filePath).toString());
     });
 }
 async function createWindow() {
+    // Register protocol before creating window (only in production)
+    if (!isDev) {
+        registerAppProtocol();
+    }
     mainWindow = new electron_1.BrowserWindow({
         width: 1200,
         height: 800,
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            webSecurity: false, // Allow loading local resources (file://)
+            webSecurity: false,
             preload: path.join(__dirname, 'preload.cjs'),
         },
     });
@@ -258,9 +241,8 @@ async function createWindow() {
         mainWindow.loadURL('http://localhost:5173');
     }
     else {
-        // Start local server and load from it
-        const port = await startServer();
-        mainWindow.loadURL(`http://127.0.0.1:${port}`);
+        // Use custom protocol - much faster than HTTP server
+        mainWindow.loadURL('app://localhost/');
     }
     if (isDev && process.env.OPEN_DEVTOOLS === 'true') {
         mainWindow.webContents.openDevTools();
@@ -271,10 +253,6 @@ async function createWindow() {
 }
 electron_1.app.whenReady().then(createWindow);
 electron_1.app.on('window-all-closed', () => {
-    if (server) {
-        server.close();
-        server = null;
-    }
     if (process.platform !== 'darwin') {
         electron_1.app.quit();
     }

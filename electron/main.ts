@@ -2,11 +2,25 @@ import { app, BrowserWindow, ipcMain, protocol, net } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { spawn, exec } from 'child_process';
-import * as http from 'http';
-import * as url from 'url';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { pathToFileURL } from 'url';
 
 const isDev = process.env.NODE_ENV === 'development';
+
+// Register app:// as a privileged scheme (must be done before app is ready)
+if (!isDev) {
+  protocol.registerSchemesAsPrivileged([
+    {
+      scheme: 'app',
+      privileges: {
+        standard: true,
+        secure: true,
+        supportFetchAPI: true,
+        corsEnabled: true,
+      },
+    },
+  ]);
+}
 
 // Safe logging functions that prevent EPIPE errors
 const safeLog = (...args: any[]) => {
@@ -34,8 +48,6 @@ const safeWarn = (...args: any[]) => {
 };
 
 let mainWindow: BrowserWindow | null = null;
-let server: http.Server | null = null;
-let serverPort = 0;
 
 const CONFIG_PATH = path.join(app.getPath('userData'), 'tts-config.json');
 const CONVERT_CACHE_DIR = path.join(app.getPath('userData'), 'subtitle-convert-cache');
@@ -225,72 +237,44 @@ async function adjustAudioSpeed(inputPath: string, outputPath: string, speed: nu
   });
 }
 
-const MIME_TYPES: Record<string, string> = {
-  '.html': 'text/html',
-  '.js': 'application/javascript',
-  '.css': 'text/css',
-  '.json': 'application/json',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.svg': 'image/svg+xml',
-  '.woff': 'font/woff',
-  '.woff2': 'font/woff2',
-  '.ttf': 'font/ttf',
-  '.ico': 'image/x-icon',
-};
+// Register custom app:// protocol for serving static files (much faster than HTTP server)
+function registerAppProtocol() {
+  const clientPath = path.join(__dirname, '../build/client');
 
-function startServer(): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const clientPath = path.join(__dirname, '../build/client');
+  protocol.handle('app', (request) => {
+    // Parse the URL - format is app://host/path
+    const url = new URL(request.url);
+    let pathname = decodeURIComponent(url.pathname);
 
-    server = http.createServer((req, res) => {
-      let pathname = url.parse(req.url || '/').pathname || '/';
+    // Remove leading slash for path.join
+    if (pathname.startsWith('/')) {
+      pathname = pathname.slice(1);
+    }
 
-      // Handle SPA routing - serve index.html for all routes
-      let filePath = path.join(clientPath, pathname);
+    let filePath = path.join(clientPath, pathname || 'index.html');
 
-      // If path doesn't exist or is a directory, serve index.html
-      if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-        filePath = path.join(clientPath, 'index.html');
-      }
+    // Handle SPA routing - serve index.html for routes that don't exist as files
+    if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+      filePath = path.join(clientPath, 'index.html');
+    }
 
-      const ext = path.extname(filePath).toLowerCase();
-      const mimeType = MIME_TYPES[ext] || 'application/octet-stream';
-
-      try {
-        const content = fs.readFileSync(filePath);
-        res.writeHead(200, { 'Content-Type': mimeType });
-        res.end(content);
-      } catch (err) {
-        res.writeHead(404);
-        res.end('Not found');
-      }
-    });
-
-    server.listen(0, '127.0.0.1', () => {
-      const address = server!.address();
-      if (typeof address === 'object' && address) {
-        serverPort = address.port;
-        safeLog(`Server running at http://127.0.0.1:${serverPort}`);
-        resolve(serverPort);
-      } else {
-        reject(new Error('Failed to get server port'));
-      }
-    });
-
-    server.on('error', reject);
+    return net.fetch(pathToFileURL(filePath).toString());
   });
 }
 
 async function createWindow() {
+  // Register protocol before creating window (only in production)
+  if (!isDev) {
+    registerAppProtocol();
+  }
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false, // Allow loading local resources (file://)
+      webSecurity: false,
       preload: path.join(__dirname, 'preload.cjs'),
     },
   });
@@ -298,9 +282,8 @@ async function createWindow() {
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
   } else {
-    // Start local server and load from it
-    const port = await startServer();
-    mainWindow.loadURL(`http://127.0.0.1:${port}`);
+    // Use custom protocol - much faster than HTTP server
+    mainWindow.loadURL('app://localhost/');
   }
 
   if (isDev && process.env.OPEN_DEVTOOLS === 'true') {
@@ -315,10 +298,6 @@ async function createWindow() {
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
-  if (server) {
-    server.close();
-    server = null;
-  }
   if (process.platform !== 'darwin') {
     app.quit();
   }

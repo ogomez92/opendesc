@@ -10,7 +10,10 @@
       "WebFetch(domain:elevenlabs.io)",
       "Bash(npx tsc:*)",
       "Bash(npm run start)",
-      "WebFetch(domain:ai.google.dev)"
+      "WebFetch(domain:ai.google.dev)",
+      "WebFetch(domain:electron-router-dom.daltonmenezes.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(npx electron .)"
     ],
     "deny": [],
     "ask": []
