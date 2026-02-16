@@ -197,7 +197,13 @@
       "editSubtitle": "Editar subtítulo",
       "jumpShortcut": "Pulsa J para saltar",
       "editShortcut": "Pulsa E para editar",
-      "actions": "Acciones"
+      "deleteShortcut": "Pulsa Supr para eliminar",
+      "actions": "Acciones",
+      "confirmDeleteTitle": "¿Eliminar subtítulo?",
+      "confirmDeleteTime": "Tiempo: {{time}}",
+      "confirmDeleteText": "Texto: {{text}}",
+      "confirmDelete": "Eliminar",
+      "subtitleDeleted": "Subtítulo eliminado"
     },
     "actions": {
       "jump": "Ir a tiempo",
@@ -209,7 +215,8 @@
       "transcribe": "Transcribir",
       "transcribing": "Transcribiendo...",
       "playSegment": "Reproducir tramo",
-      "saveSubtitle": "Guardar subtítulo"
+      "saveSubtitle": "Guardar subtítulo",
+      "delete": "Eliminar subtítulo"
     },
     "prompts": {
       "transcribe": "Transcribe this audio.",
@@ -262,7 +269,8 @@
       "insert": "F5 o S: insertar subtítulo",
       "transcribe": "T: transcribir",
       "playSegment": "P: reproducir el tramo marcado",
-      "generate": "G: generar clip de voz"
+      "generate": "G: generar clip de voz",
+      "delete": "Supr: eliminar subtítulo seleccionado"
     },
     "overlap": {
       "title": "Subtítulos superpuestos",

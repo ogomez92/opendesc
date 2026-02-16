@@ -13,7 +13,8 @@
       "WebFetch(domain:ai.google.dev)",
       "WebFetch(domain:electron-router-dom.daltonmenezes.com)",
       "WebFetch(domain:github.com)",
-      "Bash(npx electron .)"
+      "Bash(npx electron .)",
+      "WebFetch(domain:gist.github.com)"
     ],
     "deny": [],
     "ask": []

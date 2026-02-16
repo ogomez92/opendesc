@@ -174,7 +174,13 @@
       "editSubtitle": "Edit subtitle",
       "jumpShortcut": "Press J to jump",
       "editShortcut": "Press E to edit",
-      "actions": "Actions"
+      "deleteShortcut": "Press Delete to remove",
+      "actions": "Actions",
+      "confirmDeleteTitle": "Delete subtitle?",
+      "confirmDeleteTime": "Time: {{time}}",
+      "confirmDeleteText": "Text: {{text}}",
+      "confirmDelete": "Delete",
+      "subtitleDeleted": "Subtitle deleted"
     },
     "actions": {
       "jump": "Jump to time",
@@ -186,7 +192,8 @@
       "generating": "Generating clip...",
       "transcribe": "Transcribe",
       "transcribing": "Transcribing...",
-      "saveSubtitle": "Save subtitle"
+      "saveSubtitle": "Save subtitle",
+      "delete": "Delete subtitle"
     },
     "prompts": {
       "transcribe": "Transcribe this audio.",
@@ -239,7 +246,8 @@
       "playSegment": "P: play from start to end",
       "insert": "F5 or S: insert subtitle",
       "generate": "G: generate voice clip",
-      "transcribe": "T: transcribe"
+      "transcribe": "T: transcribe",
+      "delete": "Delete: remove selected subtitle"
     },
     "overlap": {
       "title": "Subtitles overlap detected",

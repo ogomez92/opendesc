@@ -188,7 +188,13 @@
       "editSubtitle": "Modifier le sous-titre",
       "jumpShortcut": "Appuyez sur J pour aller",
       "editShortcut": "Appuyez sur E pour modifier",
-      "actions": "Actions"
+      "deleteShortcut": "Appuyez sur Suppr pour supprimer",
+      "actions": "Actions",
+      "confirmDeleteTitle": "Supprimer le sous-titre ?",
+      "confirmDeleteTime": "Temps : {{time}}",
+      "confirmDeleteText": "Texte : {{text}}",
+      "confirmDelete": "Supprimer",
+      "subtitleDeleted": "Sous-titre supprimé"
     },
     "actions": {
       "jump": "Aller à l'heure",
@@ -200,7 +206,8 @@
       "playSegment": "Lire le segment",
       "saveSubtitle": "Enregistrer le sous-titre",
       "generate": "Générer le clip",
-      "generating": "Génération du clip..."
+      "generating": "Génération du clip...",
+      "delete": "Supprimer le sous-titre"
     },
     "prompts": {
       "transcribe": "Transcribe this audio.",
@@ -253,7 +260,8 @@
       "insert": "F5 ou S : insérer un sous-titre",
       "transcribe": "T : transcrire",
       "playSegment": "P : lecture du début à la fin",
-      "generate": "G : générer le clip vocal"
+      "generate": "G : générer le clip vocal",
+      "delete": "Suppr : supprimer le sous-titre sélectionné"
     },
     "overlap": {
       "title": "Chevauchement de sous-titres détecté",

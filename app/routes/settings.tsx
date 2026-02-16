@@ -516,7 +516,7 @@ export default function Settings() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-lg" aria-describedby="dialog-description">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto" aria-describedby="dialog-description">
           <DialogHeader>
             <DialogTitle>
               {editingService ? t('settings.edit') : t('settings.addService')}

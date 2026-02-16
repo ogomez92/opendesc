@@ -613,22 +613,86 @@ electron_1.ipcMain.handle('google:saveToFile', async (_, text, voiceId, apiKey, 
     }
 });
 // Gemini TTS & Transcription
+// Convert raw PCM (16-bit, 24kHz, mono) to WAV buffer
+function pcmToWav(pcmData, sampleRate = 24000, numChannels = 1, bitsPerSample = 16) {
+    const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+    const blockAlign = numChannels * (bitsPerSample / 8);
+    const dataSize = pcmData.length;
+    const header = Buffer.alloc(44);
+    header.write('RIFF', 0);
+    header.writeUInt32LE(dataSize + 36, 4);
+    header.write('WAVE', 8);
+    header.write('fmt ', 12);
+    header.writeUInt32LE(16, 16);
+    header.writeUInt16LE(1, 20);
+    header.writeUInt16LE(numChannels, 22);
+    header.writeUInt32LE(sampleRate, 24);
+    header.writeUInt32LE(byteRate, 28);
+    header.writeUInt16LE(blockAlign, 32);
+    header.writeUInt16LE(bitsPerSample, 34);
+    header.write('data', 36);
+    header.writeUInt32LE(dataSize, 40);
+    return Buffer.concat([header, pcmData]);
+}
+// Convert WAV buffer to MP3 using ffmpeg
+async function wavToMp3(wavPath, mp3Path) {
+    if (!(await checkFfmpeg())) {
+        return { success: false, error: 'FFmpeg is required to convert Gemini TTS audio.' };
+    }
+    return new Promise((resolve) => {
+        const ffmpeg = (0, child_process_1.spawn)('ffmpeg', ['-y', '-i', wavPath, '-codec:a', 'libmp3lame', '-b:a', '192k', mp3Path]);
+        let errorOutput = '';
+        ffmpeg.stderr.on('data', (d) => (errorOutput += d.toString()));
+        ffmpeg.on('close', (code) => {
+            if (code === 0) {
+                resolve({ success: true });
+            }
+            else {
+                resolve({ success: false, error: `FFmpeg WAV→MP3 conversion failed: ${errorOutput}` });
+            }
+        });
+    });
+}
+const GEMINI_TTS_MODEL = 'gemini-2.5-flash-preview-tts';
 electron_1.ipcMain.handle('gemini:getVoices', async () => {
-    // Gemini 2.0 Flash prebuilt voices
     const voices = [
-        { id: 'Puck', name: 'Puck', language: 'en-US' },
-        { id: 'Charon', name: 'Charon', language: 'en-US' },
-        { id: 'Kore', name: 'Kore', language: 'en-US' },
-        { id: 'Fenrir', name: 'Fenrir', language: 'en-US' },
-        { id: 'Aoede', name: 'Aoede', language: 'en-US' },
+        { id: 'Zephyr', name: 'Zephyr (Bright)', language: 'en-US' },
+        { id: 'Puck', name: 'Puck (Upbeat)', language: 'en-US' },
+        { id: 'Charon', name: 'Charon (Informative)', language: 'en-US' },
+        { id: 'Kore', name: 'Kore (Firm)', language: 'en-US' },
+        { id: 'Fenrir', name: 'Fenrir (Excitable)', language: 'en-US' },
+        { id: 'Leda', name: 'Leda (Youthful)', language: 'en-US' },
+        { id: 'Orus', name: 'Orus (Firm)', language: 'en-US' },
+        { id: 'Aoede', name: 'Aoede (Breezy)', language: 'en-US' },
+        { id: 'Callirrhoe', name: 'Callirrhoe (Easy-going)', language: 'en-US' },
+        { id: 'Autonoe', name: 'Autonoe (Bright)', language: 'en-US' },
+        { id: 'Enceladus', name: 'Enceladus (Breathy)', language: 'en-US' },
+        { id: 'Iapetus', name: 'Iapetus (Clear)', language: 'en-US' },
+        { id: 'Umbriel', name: 'Umbriel (Easy-going)', language: 'en-US' },
+        { id: 'Algieba', name: 'Algieba (Smooth)', language: 'en-US' },
+        { id: 'Despina', name: 'Despina (Smooth)', language: 'en-US' },
+        { id: 'Erinome', name: 'Erinome (Clear)', language: 'en-US' },
+        { id: 'Algenib', name: 'Algenib (Gravelly)', language: 'en-US' },
+        { id: 'Rasalgethi', name: 'Rasalgethi (Informative)', language: 'en-US' },
+        { id: 'Laomedeia', name: 'Laomedeia (Upbeat)', language: 'en-US' },
+        { id: 'Achernar', name: 'Achernar (Soft)', language: 'en-US' },
+        { id: 'Alnilam', name: 'Alnilam (Firm)', language: 'en-US' },
+        { id: 'Schedar', name: 'Schedar (Even)', language: 'en-US' },
+        { id: 'Gacrux', name: 'Gacrux (Mature)', language: 'en-US' },
+        { id: 'Pulcherrima', name: 'Pulcherrima (Forward)', language: 'en-US' },
+        { id: 'Achird', name: 'Achird (Friendly)', language: 'en-US' },
+        { id: 'Zubenelgenubi', name: 'Zubenelgenubi (Casual)', language: 'en-US' },
+        { id: 'Vindemiatrix', name: 'Vindemiatrix (Gentle)', language: 'en-US' },
+        { id: 'Sadachbia', name: 'Sadachbia (Lively)', language: 'en-US' },
+        { id: 'Sadaltager', name: 'Sadaltager (Knowledgeable)', language: 'en-US' },
+        { id: 'Sulafat', name: 'Sulafat (Warm)', language: 'en-US' },
     ];
     return { voices };
 });
 electron_1.ipcMain.handle('gemini:speak', async (_, text, voiceId, apiKey, stylePrompt, speed) => {
     try {
         const finalText = stylePrompt ? `[${stylePrompt}] ${text}` : text;
-        // Using REST API to bypass potential SDK issues with experimental features
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_TTS_MODEL}:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -638,7 +702,7 @@ electron_1.ipcMain.handle('gemini:speak', async (_, text, voiceId, apiKey, style
                     speechConfig: {
                         voiceConfig: {
                             prebuiltVoiceConfig: {
-                                voiceName: voiceId, // e.g. 'Puck', 'Charon'
+                                voiceName: voiceId,
                             },
                         },
                     },
@@ -653,20 +717,30 @@ electron_1.ipcMain.handle('gemini:speak', async (_, text, voiceId, apiKey, style
         const data = await response.json();
         const part = data.candidates?.[0]?.content?.parts?.[0];
         if (!part?.inlineData?.data) {
-            // Log full response for debugging if structure is different
             safeError('[Gemini] Unexpected response structure:', JSON.stringify(data, null, 2));
             throw new Error('No audio data received from Gemini.');
         }
-        const audioBuffer = Buffer.from(part.inlineData.data, 'base64');
-        const tempPath = path.join(electron_1.app.getPath('temp'), `gemini-tts-${Date.now()}.mp3`);
-        fs.writeFileSync(tempPath, audioBuffer);
+        // New TTS model returns raw PCM (16-bit, 24kHz, mono) — convert to WAV then MP3
+        const pcmBuffer = Buffer.from(part.inlineData.data, 'base64');
+        const wavBuffer = pcmToWav(pcmBuffer);
+        const tempWav = path.join(electron_1.app.getPath('temp'), `gemini-tts-${Date.now()}.wav`);
+        const tempMp3 = path.join(electron_1.app.getPath('temp'), `gemini-tts-${Date.now()}.mp3`);
+        fs.writeFileSync(tempWav, wavBuffer);
+        const convertResult = await wavToMp3(tempWav, tempMp3);
+        try {
+            fs.unlinkSync(tempWav);
+        }
+        catch (_e) { }
+        if (!convertResult.success) {
+            return { error: convertResult.error };
+        }
         if (speed && speed !== 1) {
-            const result = await adjustAudioSpeed(tempPath, tempPath, speed);
+            const result = await adjustAudioSpeed(tempMp3, tempMp3, speed);
             if (!result.success) {
                 return { error: result.error };
             }
         }
-        return { success: true, audioPath: tempPath };
+        return { success: true, audioPath: tempMp3 };
     }
     catch (error) {
         safeError('[Gemini] Speak Error:', error);
@@ -676,7 +750,7 @@ electron_1.ipcMain.handle('gemini:speak', async (_, text, voiceId, apiKey, style
 electron_1.ipcMain.handle('gemini:saveToFile', async (_, text, voiceId, apiKey, outputPath, stylePrompt, speed) => {
     try {
         const finalText = stylePrompt ? `[${stylePrompt}] ${text}` : text;
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_TTS_MODEL}:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -703,23 +777,24 @@ electron_1.ipcMain.handle('gemini:saveToFile', async (_, text, voiceId, apiKey, 
         if (!part?.inlineData?.data) {
             throw new Error('No audio data received from Gemini.');
         }
-        const audioData = Buffer.from(part.inlineData.data, 'base64');
+        // New TTS model returns raw PCM (16-bit, 24kHz, mono) — convert to WAV then MP3
+        const pcmBuffer = Buffer.from(part.inlineData.data, 'base64');
+        const wavBuffer = pcmToWav(pcmBuffer);
+        const tempWav = path.join(electron_1.app.getPath('temp'), `gemini-temp-save-${Date.now()}.wav`);
+        fs.writeFileSync(tempWav, wavBuffer);
+        const convertResult = await wavToMp3(tempWav, outputPath);
+        try {
+            fs.unlinkSync(tempWav);
+        }
+        catch (_e) { }
+        if (!convertResult.success)
+            return { error: convertResult.error };
         if (speed && speed !== 1) {
-            const tempPath = path.join(electron_1.app.getPath('temp'), `gemini-temp-save-${Date.now()}.mp3`);
-            fs.writeFileSync(tempPath, audioData);
-            const result = await adjustAudioSpeed(tempPath, outputPath, speed);
-            try {
-                fs.unlinkSync(tempPath);
-            }
-            catch (e) { } // Clean up temp
+            const result = await adjustAudioSpeed(outputPath, outputPath, speed);
             if (!result.success)
                 return { error: result.error };
-            return { success: true, path: outputPath };
         }
-        else {
-            fs.writeFileSync(outputPath, audioData);
-            return { success: true, path: outputPath };
-        }
+        return { success: true, path: outputPath };
     }
     catch (error) {
         safeError('[Gemini] SaveToFile Error:', error);

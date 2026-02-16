@@ -30,6 +30,7 @@ import {
   SkipBack,
   SkipForward,
   Sparkles,
+  Trash2,
 } from 'lucide-react';
 
 const SEEK_STEP_MS = [1000, 5000, 10000, 30000, 60000, 300000, 600000, 900000, 1800000, 3600000];
@@ -102,6 +103,8 @@ export default function SubtitleCreation() {
   const subtitlePreviewAudioRef = useRef<HTMLAudioElement | null>(null);
   const [overlapDialogOpen, setOverlapDialogOpen] = useState(false);
   const [overlapEdits, setOverlapEdits] = useState<Record<number, { start: string; end: string }>>({});
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [subtitleToDelete, setSubtitleToDelete] = useState<Subtitle | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const cacheRef = useRef<Record<string, { file: string; text: string; serviceId: string; voiceId: string }>>({});
   const cacheDirRef = useRef<string | null>(null);
@@ -224,6 +227,19 @@ export default function SubtitleCreation() {
     [t]
   );
 
+  // Seek to subtitle start and play using the MAIN audio (for navigation)
+  const playSubtitleWithMainAudio = useCallback(
+    (subtitle: Subtitle) => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      audio.currentTime = subtitle.startTime / 1000;
+      setCurrentTime(subtitle.startTime);
+      audio.play().then(() => setIsPlaying(true)).catch(() => {});
+    },
+    []
+  );
+
+  // Play 1 second from subtitle start using SECONDARY audio (for nudge previews)
   const playSubtitlePreview = useCallback(
     (subtitle: Subtitle) => {
       if (!audioPath || !audioSrc) return;
@@ -246,6 +262,44 @@ export default function SubtitleCreation() {
         const checkTime = () => {
           const elapsed = (preview.currentTime * 1000) - subtitle.startTime;
           if (elapsed >= 1000) {
+            stopPreview();
+          }
+        };
+
+        preview.addEventListener('timeupdate', checkTime);
+        preview.play().catch(() => {
+          stopPreview();
+        });
+      } catch (err) {
+        // Silently fail preview
+      }
+    },
+    [audioPath, audioSrc]
+  );
+
+  const playSubtitleEndPreview = useCallback(
+    (subtitle: Subtitle) => {
+      if (!audioPath || !audioSrc) return;
+
+      try {
+        const preview = subtitlePreviewAudioRef.current ?? new Audio();
+        if (!subtitlePreviewAudioRef.current) {
+          subtitlePreviewAudioRef.current = preview;
+        }
+
+        preview.pause();
+        preview.src = audioSrc;
+        // Start 1 second before end time (or at start if subtitle is shorter than 1s)
+        const startPosition = Math.max(subtitle.startTime, subtitle.endTime - 1000);
+        preview.currentTime = startPosition / 1000;
+
+        const stopPreview = () => {
+          preview.pause();
+          preview.removeEventListener('timeupdate', checkTime);
+        };
+
+        const checkTime = () => {
+          if (preview.currentTime * 1000 >= subtitle.endTime) {
             stopPreview();
           }
         };
@@ -417,21 +471,78 @@ export default function SubtitleCreation() {
     });
   };
 
-  const handlePlayKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key === 'ArrowLeft') {
-      event.preventDefault();
-      handleSeek(event.shiftKey ? -100 : -SEEK_STEP_MS[seekStepIndex]);
-    } else if (event.key === 'ArrowRight') {
-      event.preventDefault();
-      handleSeek(event.shiftKey ? 100 : SEEK_STEP_MS[seekStepIndex]);
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      cycleSeekStep(1);
-    } else if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      cycleSeekStep(-1);
-    }
-  };
+  const handlePlayKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      const selectedSub = currentSubtitle;
+
+      if (event.key === 'ArrowLeft' && event.shiftKey && selectedSub) {
+        // Nudge start time backward by 100ms
+        event.preventDefault();
+        const newStartTime = Math.max(0, selectedSub.startTime - 100);
+        setSubtitles((prev) =>
+          prev.map((sub) =>
+            sub.id === selectedSub.id ? { ...sub, startTime: newStartTime } : sub
+          )
+        );
+        const updatedSub = { ...selectedSub, startTime: newStartTime };
+        syncMarksFromSubtitle(updatedSub);
+        announce(t('subtitleCreation.live.startMarked', { time: formatTimestamp(newStartTime) }));
+        playSubtitlePreview(updatedSub);
+      } else if (event.key === 'ArrowRight' && event.shiftKey && selectedSub) {
+        // Nudge start time forward by 100ms
+        event.preventDefault();
+        const newStartTime = Math.min(selectedSub.endTime - 1, selectedSub.startTime + 100);
+        setSubtitles((prev) =>
+          prev.map((sub) =>
+            sub.id === selectedSub.id ? { ...sub, startTime: newStartTime } : sub
+          )
+        );
+        const updatedSub = { ...selectedSub, startTime: newStartTime };
+        syncMarksFromSubtitle(updatedSub);
+        announce(t('subtitleCreation.live.startMarked', { time: formatTimestamp(newStartTime) }));
+        playSubtitlePreview(updatedSub);
+      } else if (event.key === 'ArrowLeft' && event.ctrlKey && selectedSub) {
+        // Nudge end time backward by 100ms
+        event.preventDefault();
+        const newEndTime = Math.max(selectedSub.startTime + 1, selectedSub.endTime - 100);
+        setSubtitles((prev) =>
+          prev.map((sub) =>
+            sub.id === selectedSub.id ? { ...sub, endTime: newEndTime } : sub
+          )
+        );
+        const updatedSub = { ...selectedSub, endTime: newEndTime };
+        syncMarksFromSubtitle(updatedSub);
+        announce(t('subtitleCreation.live.endMarked', { time: formatTimestamp(newEndTime) }));
+        playSubtitleEndPreview(updatedSub);
+      } else if (event.key === 'ArrowRight' && event.ctrlKey && selectedSub) {
+        // Nudge end time forward by 100ms
+        event.preventDefault();
+        const newEndTime = selectedSub.endTime + 100;
+        setSubtitles((prev) =>
+          prev.map((sub) =>
+            sub.id === selectedSub.id ? { ...sub, endTime: newEndTime } : sub
+          )
+        );
+        const updatedSub = { ...selectedSub, endTime: newEndTime };
+        syncMarksFromSubtitle(updatedSub);
+        announce(t('subtitleCreation.live.endMarked', { time: formatTimestamp(newEndTime) }));
+        playSubtitleEndPreview(updatedSub);
+      } else if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        handleSeek(-SEEK_STEP_MS[seekStepIndex]);
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        handleSeek(SEEK_STEP_MS[seekStepIndex]);
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        cycleSeekStep(1);
+      } else if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        cycleSeekStep(-1);
+      }
+    },
+    [announce, currentSubtitle, handleSeek, playSubtitleEndPreview, playSubtitlePreview, seekStepIndex, syncMarksFromSubtitle, t]
+  );
 
   const resetMarkers = () => {
     setStartMark(null);
@@ -569,8 +680,7 @@ export default function SubtitleCreation() {
   }, [t]);
 
   const handlePlaySegment = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
+    if (!audioPath || !audioSrc) return;
     const range = resolveRangeForAction();
     if (!range) {
       const msg = t('subtitleCreation.errors.missingMarksPlaySegment');
@@ -580,16 +690,36 @@ export default function SubtitleCreation() {
     }
     const startMs = Math.min(range.start, range.end);
     const endMs = Math.max(range.start, range.end);
-    audio.currentTime = startMs / 1000;
-    setSegmentEnd(endMs);
-    audio
-      .play()
-      .then(() => setIsPlaying(true))
-      .catch((err) => {
-        setError((err as Error).message);
-        setSegmentEnd(null);
+
+    try {
+      const preview = subtitlePreviewAudioRef.current ?? new Audio();
+      if (!subtitlePreviewAudioRef.current) {
+        subtitlePreviewAudioRef.current = preview;
+      }
+
+      preview.pause();
+      preview.src = audioSrc;
+      preview.currentTime = startMs / 1000;
+
+      const stopPreview = () => {
+        preview.pause();
+        preview.removeEventListener('timeupdate', checkTime);
+      };
+
+      const checkTime = () => {
+        if (preview.currentTime * 1000 >= endMs) {
+          stopPreview();
+        }
+      };
+
+      preview.addEventListener('timeupdate', checkTime);
+      preview.play().catch(() => {
+        stopPreview();
       });
-  }, [announce, resolveRangeForAction, t]);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }, [announce, audioPath, audioSrc, resolveRangeForAction, t]);
 
   const addSubtitle = (text: string) => {
     if (startMark === null || endMark === null) {
@@ -768,7 +898,11 @@ export default function SubtitleCreation() {
       announce(msg);
       return;
     }
-    const textForTts = targetSubtitle.text.replace(/\n/g, ' ').trim();
+    let textForTts = targetSubtitle.text.replace(/\n/g, ' ').trim();
+    // Add period if text ends with alphanumeric character
+    if (textForTts && /[a-zA-Z0-9]$/.test(textForTts)) {
+      textForTts += '.';
+    }
     if (!textForTts) {
       const msg = t('subtitleCreation.errors.emptySubtitle');
       setError(msg);
@@ -913,6 +1047,37 @@ export default function SubtitleCreation() {
     []
   );
 
+  const handleRequestDelete = useCallback((subtitle: Subtitle) => {
+    setSubtitleToDelete(subtitle);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
+    if (!subtitleToDelete) return;
+    const deletedIndex = subtitles.findIndex((sub) => sub.id === subtitleToDelete.id);
+    setSubtitles((prev) => {
+      const filtered = prev.filter((sub) => sub.id !== subtitleToDelete.id);
+      return filtered.map((sub, index) => ({ ...sub, id: index + 1 }));
+    });
+    announce(t('subtitleCreation.list.subtitleDeleted'));
+    setDeleteDialogOpen(false);
+    setSubtitleToDelete(null);
+    // Focus next subtitle or previous if last was deleted
+    setTimeout(() => {
+      const newSubtitles = subtitles.filter((sub) => sub.id !== subtitleToDelete.id);
+      if (newSubtitles.length > 0) {
+        const nextIndex = Math.min(deletedIndex, newSubtitles.length - 1);
+        const nextSub = newSubtitles[nextIndex];
+        const nextItem = subtitleListRef.current?.querySelector(`[data-subtitle-id="${nextIndex + 1}"]`) as HTMLElement;
+        nextItem?.focus();
+        setCurrentSubtitleId(nextIndex + 1);
+      } else {
+        playButtonRef.current?.focus();
+        setCurrentSubtitleId(null);
+      }
+    }, 0);
+  }, [announce, subtitleToDelete, subtitles, t]);
+
   const handleSubtitleListKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLLIElement>, subtitle: Subtitle, index: number) => {
       const actionButtons = ['jump', 'edit'] as const;
@@ -923,9 +1088,6 @@ export default function SubtitleCreation() {
         const prevIndex = Math.max(0, index - 1);
         if (prevIndex !== index) {
           const prevSub = subtitles[prevIndex];
-          setCurrentSubtitleId(prevSub.id);
-          setFocusedButtonIndex(0);
-          playSubtitlePreview(prevSub);
           const prevItem = subtitleListRef.current?.querySelector(`[data-subtitle-id="${prevSub.id}"]`) as HTMLElement;
           prevItem?.focus();
         }
@@ -934,9 +1096,6 @@ export default function SubtitleCreation() {
         const nextIndex = Math.min(subtitles.length - 1, index + 1);
         if (nextIndex !== index) {
           const nextSub = subtitles[nextIndex];
-          setCurrentSubtitleId(nextSub.id);
-          setFocusedButtonIndex(0);
-          playSubtitlePreview(nextSub);
           const nextItem = subtitleListRef.current?.querySelector(`[data-subtitle-id="${nextSub.id}"]`) as HTMLElement;
           nextItem?.focus();
         }
@@ -963,8 +1122,6 @@ export default function SubtitleCreation() {
         event.preventDefault();
         if (subtitles.length > 0) {
           const firstSub = subtitles[0];
-          setCurrentSubtitleId(firstSub.id);
-          setFocusedButtonIndex(0);
           const firstItem = subtitleListRef.current?.querySelector(`[data-subtitle-id="${firstSub.id}"]`) as HTMLElement;
           firstItem?.focus();
         }
@@ -972,14 +1129,15 @@ export default function SubtitleCreation() {
         event.preventDefault();
         if (subtitles.length > 0) {
           const lastSub = subtitles[subtitles.length - 1];
-          setCurrentSubtitleId(lastSub.id);
-          setFocusedButtonIndex(0);
           const lastItem = subtitleListRef.current?.querySelector(`[data-subtitle-id="${lastSub.id}"]`) as HTMLElement;
           lastItem?.focus();
         }
+      } else if (event.key === 'Delete') {
+        event.preventDefault();
+        handleRequestDelete(subtitle);
       }
     },
-    [subtitles, focusedButtonIndex, handleJumpToSubtitle, handleOpenEditDialog, playSubtitlePreview]
+    [subtitles, focusedButtonIndex, handleJumpToSubtitle, handleOpenEditDialog, handleRequestDelete]
   );
 
   useEffect(() => {
@@ -1360,6 +1518,22 @@ export default function SubtitleCreation() {
               <Download className="h-4 w-4 mr-2" />
               {isTranscribing ? t('subtitleCreation.actions.transcribing') : t('subtitleCreation.actions.transcribe')}
             </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => {
+                if (currentSubtitle) {
+                  handleRequestDelete(currentSubtitle);
+                }
+              }}
+              aria-description={t('subtitleCreation.hotkeys.delete')}
+              tabIndex={-1}
+              data-toolbar-item="true"
+              disabled={!currentSubtitle}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {t('subtitleCreation.actions.delete')}
+            </Button>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
@@ -1429,12 +1603,14 @@ export default function SubtitleCreation() {
                       onFocus={() => {
                         setCurrentSubtitleId(sub.id);
                         setFocusedButtonIndex(0);
-                        playSubtitlePreview(sub);
+                        syncMarksFromSubtitle(sub);
+                        playSubtitleWithMainAudio(sub);
                       }}
                       onClick={() => {
                         setCurrentSubtitleId(sub.id);
                         setFocusedButtonIndex(0);
-                        playSubtitlePreview(sub);
+                        syncMarksFromSubtitle(sub);
+                        playSubtitleWithMainAudio(sub);
                       }}
                       className={`
                         group flex items-center gap-3 rounded-lg border p-3 cursor-pointer
@@ -1665,6 +1841,40 @@ export default function SubtitleCreation() {
               {t('subtitleCreation.media.cancel')}
             </Button>
             <Button onClick={applyOverlapEdits}>{t('subtitleCreation.overlap.apply')}</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open);
+          if (!open) {
+            setSubtitleToDelete(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('subtitleCreation.list.confirmDeleteTitle')}</DialogTitle>
+          </DialogHeader>
+          {subtitleToDelete && (
+            <div className="space-y-2 text-sm">
+              <p className="text-muted-foreground">
+                {t('subtitleCreation.list.confirmDeleteTime', {
+                  time: formatTimestamp(subtitleToDelete.startTime),
+                })}
+              </p>
+              <p className="font-medium">{t('subtitleCreation.list.confirmDeleteText', { text: subtitleToDelete.text })}</p>
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              {t('subtitleCreation.media.cancel')}
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>
+              {t('subtitleCreation.list.confirmDelete')}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -160,8 +160,12 @@ export default function ConvertSubtitles() {
         });
         setLiveMessage(t('convertSubtitles.generatingAudio', { current: i + 1, total: subtitles.length }));
 
-        const textForTts = sub.text.replace(/\n/g, ' ');
-        if (!textForTts.trim()) continue;
+        let textForTts = sub.text.replace(/\n/g, ' ').trim();
+        // Add period if text ends with alphanumeric character
+        if (textForTts && /[a-zA-Z0-9]$/.test(textForTts)) {
+          textForTts += '.';
+        }
+        if (!textForTts) continue;
 
         const baseSpeed = defaultService.speedFactor ?? 1;
         const serviceKey = defaultService.id || defaultService.name || 'service';

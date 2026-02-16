@@ -42,32 +42,45 @@ const DEFAULT_SPEED = 1;
 function getWebSpeechVoices(): Promise<Voice[]> {
   return new Promise((resolve) => {
     const synth = window.speechSynthesis;
+    let resolved = false;
 
-    const getVoices = () => {
+    const resolveVoices = () => {
+      if (resolved) return;
       const voices = synth.getVoices();
-      resolve(
-        voices.map((v) => ({
-          id: v.voiceURI,
-          name: v.name,
-          language: v.lang,
-        }))
-      );
+      if (voices.length > 0) {
+        resolved = true;
+        synth.onvoiceschanged = null;
+        resolve(
+          voices.map((v) => ({
+            id: v.voiceURI,
+            name: v.name,
+            language: v.lang,
+          }))
+        );
+      }
     };
 
-    // Voices may not be loaded immediately
-    if (synth.getVoices().length > 0) {
-      getVoices();
-    } else {
-      synth.onvoiceschanged = getVoices;
-      // Fallback timeout
-      setTimeout(() => {
-        if (synth.getVoices().length > 0) {
-          getVoices();
-        } else {
+    // Try immediately
+    resolveVoices();
+    if (resolved) return;
+
+    // Listen for the voiceschanged event
+    synth.onvoiceschanged = resolveVoices;
+
+    // Poll periodically — Electron/Chromium can be slow to load voices
+    let attempts = 0;
+    const interval = setInterval(() => {
+      attempts++;
+      resolveVoices();
+      if (resolved || attempts >= 10) {
+        clearInterval(interval);
+        if (!resolved) {
+          resolved = true;
+          synth.onvoiceschanged = null;
           resolve([]);
         }
-      }, 1000);
-    }
+      }
+    }, 500);
   });
 }
 
